@@ -1,9 +1,9 @@
 # Mono
 
-Mono is a tiny, single-page PHP framework. 
+Mono is a tiny, single-class PHP framework for writing single-page PHP apps.
 It shines when quickly developing small tools with limited scope.
 In +- 70 LOC, you get basic routing (using FastRoute), DI (using PHP-DI),
-and Twig templating. Anything else you need, you got to bring yourself.
+and Twig templating. Anything else you need, you have to bring yourself.
 
 ## Routing
 Mono's routing implementation shares 90% of its code with the ['basic usage example'](https://github.com/nikic/FastRoute#usage) from the FastRoute documentation.
