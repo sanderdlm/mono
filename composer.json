@@ -1,7 +1,7 @@
 {
     "name": "sanderdlm/mono",
     "description": "Framework for single file PHP applications",
-    "type": "project",
+    "type": "library",
     "license": "MIT",
     "require": {
         "php": "^8.2",
