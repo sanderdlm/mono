@@ -28,11 +28,12 @@ final class Mono
 
     public function __construct()
     {
-        if (!file_exists(__DIR__ . '/../templates')) {
+        $documentRoot = $_SERVER['DOCUMENT_ROOT'];
+        if (!file_exists($documentRoot . '/../templates')) {
             throw new \RuntimeException('Templates directory not found, please create one.');
         }
 
-        $loader = new FilesystemLoader(__DIR__ . '/../templates');
+        $loader = new FilesystemLoader($documentRoot . '/../templates');
         $this->twig = new Environment($loader, ['debug' => true]);
         $this->twig->addExtension(new DebugExtension());
 
