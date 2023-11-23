@@ -8,17 +8,12 @@ use PHPUnit\Framework\TestCase;
 
 class MonoTest extends TestCase
 {
-    protected function setUp(): void
-    {
-        $_SERVER['DOCUMENT_ROOT'] = __DIR__;
-    }
-
     public function testRouting(): void
     {
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['REQUEST_URI'] = '/';
 
-        $mono = new Mono();
+        $mono = new Mono(__DIR__);
 
         $mono->addRoute('GET', '/', function () {
             return 'Hello, world!';
@@ -34,7 +29,7 @@ class MonoTest extends TestCase
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['REQUEST_URI'] = '/';
 
-        $mono = new Mono();
+        $mono = new Mono(__DIR__);
 
         $mono->addRoute('GET', '/', function () use ($mono) {
             return $mono->render('index.html.twig', [
@@ -52,7 +47,7 @@ class MonoTest extends TestCase
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['REQUEST_URI'] = '/';
 
-        $mono = new Mono();
+        $mono = new Mono(__DIR__);
 
         $mono->addRoute('GET', '/', function () use ($mono) {
             $demoClass = $mono->get(NodeTraverser::class);
