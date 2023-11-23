@@ -26,9 +26,8 @@ final class Mono
      */
     private array $routes = [];
 
-    public function __construct()
+    public function __construct(string $documentRoot)
     {
-        $documentRoot = $_SERVER['DOCUMENT_ROOT'];
         if (!file_exists($documentRoot . '/../templates')) {
             throw new \RuntimeException('Templates directory not found, please create one.');
         }
