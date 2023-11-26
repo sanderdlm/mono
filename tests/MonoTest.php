@@ -83,7 +83,25 @@ class MonoTest extends TestCase
             $demoClass = $mono->get(NodeTraverser::class);
 
             $this->assertInstanceOf(NodeTraverser::class, $demoClass);
+
+            return $mono->createResponse('OK');
         });
+
+        $mono->run();
+    }
+
+    public function testInvalidResponseThrowError(): void
+    {
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['REQUEST_URI'] = '/';
+
+        $mono = new Mono(__DIR__);
+
+        $mono->addRoute('GET', '/', function () {
+            return 'OK';
+        });
+
+        $this->expectException(\RuntimeException::class);
 
         $mono->run();
     }

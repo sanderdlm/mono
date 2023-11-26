@@ -100,8 +100,11 @@ final class Mono
             default => $this->createResponse('500 Internal Server Error', 500)
         };
 
-        if ($response instanceof ResponseInterface) {
-            (new SapiEmitter())->emit($response);
+        if (!$response instanceof ResponseInterface) {
+            throw new \RuntimeException('Invalid response received from route ' . $request->getUri()->getPath() .
+                '. Please return a valid PSR-7 response from your handler.');
         }
+
+        (new SapiEmitter())->emit($response);
     }
 }
