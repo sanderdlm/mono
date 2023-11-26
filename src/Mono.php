@@ -6,7 +6,12 @@ namespace Mono;
 
 use DI\Container;
 use FastRoute;
+use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
+use Nyholm\Psr7\Factory\Psr17Factory;
+use Nyholm\Psr7\Response;
+use Nyholm\Psr7Server\ServerRequestCreator;
 use Psr\Container\ContainerInterface;
+use Psr\Http\Message\ResponseInterface;
 use Twig\Environment;
 use Twig\Extension\DebugExtension;
 use Twig\Loader\FilesystemLoader;
@@ -51,11 +56,13 @@ final class Mono
     /**
      * @param array<string, mixed> $data
      */
-    public function render(string $template, array $data = []): string
+    public function render(string $template, array $data = []): ResponseInterface
     {
         $template = $this->twig->load($template);
 
-        return $template->render($data);
+        $output = $template->render($data);
+
+        return $this->createResponse($output);
     }
 
     public function get(string $className): mixed
@@ -63,7 +70,14 @@ final class Mono
         return $this->container->get($className);
     }
 
-    public function run(): mixed
+    public function createResponse(string $body, int $status = 200): Response
+    {
+        $psr17Factory = new Psr17Factory();
+
+        return (new Response($status))->withBody($psr17Factory->createStream($body));
+    }
+
+    public function run(): void
     {
         $dispatcher = FastRoute\simpleDispatcher(function (FastRoute\RouteCollector $r) {
             foreach ($this->routes as $route) {
@@ -71,21 +85,26 @@ final class Mono
             }
         });
 
-        $httpMethod = $_SERVER['REQUEST_METHOD'];
-        $uri = $_SERVER['REQUEST_URI'];
+        $psr17Factory = new Psr17Factory();
 
-        if (false !== $pos = strpos($uri, '?')) {
-            $uri = substr($uri, 0, $pos);
-        }
-        $uri = rawurldecode($uri);
+        $creator = new ServerRequestCreator($psr17Factory, $psr17Factory, $psr17Factory, $psr17Factory);
+        $request = $creator->fromGlobals();
 
-        $routeInfo = $dispatcher->dispatch($httpMethod, $uri);
+        $route = $dispatcher->dispatch($request->getMethod(), $request->getUri()->getPath());
 
-        return match ($routeInfo[0]) {
-            FastRoute\Dispatcher::NOT_FOUND => '404 Not Found',
-            FastRoute\Dispatcher::METHOD_NOT_ALLOWED => '405 Method Not Allowed',
-            FastRoute\Dispatcher::FOUND => call_user_func_array($routeInfo[1], $routeInfo[2]),
-            default => throw new \RuntimeException('Something went wrong'),
+        /** @var ?ResponseInterface $response */
+        $response = match ($route[0]) {
+            FastRoute\Dispatcher::NOT_FOUND => $this->createResponse('404 Not Found', 404),
+            FastRoute\Dispatcher::METHOD_NOT_ALLOWED => $this->createResponse('405 Method Not Allowed', 405),
+            FastRoute\Dispatcher::FOUND => call_user_func_array($route[1], [$request, ...$route[2]]),
+            default => $this->createResponse('500 Internal Server Error', 500)
         };
+
+        if (!$response instanceof ResponseInterface) {
+            throw new \RuntimeException('Invalid response received from route ' . $request->getUri()->getPath() .
+                '. Please return a valid PSR-7 response from your handler.');
+        }
+
+        (new SapiEmitter())->emit($response);
     }
 }
