@@ -16,12 +16,6 @@ use Twig\Environment;
 use Twig\Extension\DebugExtension;
 use Twig\Loader\FilesystemLoader;
 
-/*
- * Mono is a tiny, single-class PHP framework for writing single-page PHP apps.
- * It shines when quickly developing small tools with limited scope.
- * In +- 70 LOC, you get basic routing (using FastRoute), DI (using PHP-DI),
- * and Twig templating. Anything else you need, you have to bring yourself.
- */
 final class Mono
 {
     private ContainerInterface $container;
