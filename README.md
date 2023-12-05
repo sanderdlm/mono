@@ -17,6 +17,8 @@ The first argument to the closure is the always current request, which is a [PSR
 When `$mono->run()` is called, the current request is matched against the routes you added, the closure is invoked and the response is emitted.
 
 ```php
+<?php
+
 $mono = new Mono();
 
 $mono->addRoute('GET', '/books/{book}', function(RequestInterface $request, string $book) use ($mono) {
@@ -33,6 +35,8 @@ When a Mono object is created, it constructs a basic PHP-DI container with defau
 You can fetch instances from the container with the `get()` method on your Mono object.
 
 ```php
+<?php
+
 $mono = new Mono();
 
 $mono->addRoute('GET', '/example', function() use ($mono) {
@@ -46,10 +50,14 @@ $mono->run();
 
 ## Twig
 
-Mono comes with Twig out-of-the-box. You can use the `render()` method on your Mono object to render a Twig template.
+Mono comes with Twig out-of-the-box. If you want to use Twig, you have to pass the path to your templates folder in the Mono constructor.
+
+Afterward, you can use the `render()` method on your Mono object to render a Twig template from that folder.
 
 ```php
-$mono = new Mono();
+<?php
+
+$mono = new Mono(__DIR__ . '/templates');
 
 $mono->addRoute('GET', '/example', function() use ($mono) {
     $result = $mono->get(SomeDependency::class)->doSomething();

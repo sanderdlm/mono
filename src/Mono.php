@@ -19,21 +19,19 @@ use Twig\Loader\FilesystemLoader;
 final class Mono
 {
     private ContainerInterface $container;
-    private Environment $twig;
+    private ?Environment $twig = null;
     /**
      * @var array <array{method: string, path: string, handler: callable}>
      */
     private array $routes = [];
 
-    public function __construct(string $documentRoot)
+    public function __construct(string $templateFolder = null)
     {
-        if (!file_exists($documentRoot . '/../templates')) {
-            throw new \RuntimeException('Templates directory not found, please create one.');
+        if ($templateFolder !== null && file_exists($templateFolder)) {
+            $loader = new FilesystemLoader($templateFolder);
+            $this->twig = new Environment($loader, ['debug' => true]);
+            $this->twig->addExtension(new DebugExtension());
         }
-
-        $loader = new FilesystemLoader($documentRoot . '/../templates');
-        $this->twig = new Environment($loader, ['debug' => true]);
-        $this->twig->addExtension(new DebugExtension());
 
         $this->container = new Container();
     }
@@ -52,6 +50,10 @@ final class Mono
      */
     public function render(string $template, array $data = []): ResponseInterface
     {
+        if (!$this->twig instanceof Environment) {
+            throw new \RuntimeException('Twig is not configured. Please provide a template folder in the constructor.');
+        }
+
         $template = $this->twig->load($template);
 
         $output = $template->render($data);

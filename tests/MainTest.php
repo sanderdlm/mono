@@ -7,7 +7,7 @@ use PhpParser\NodeTraverser;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
 
-class MonoTest extends TestCase
+class MainTest extends TestCase
 {
     private function catchOutput(callable $run): string
     {
@@ -27,9 +27,9 @@ class MonoTest extends TestCase
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['REQUEST_URI'] = '/';
 
-        $mono = new Mono(__DIR__);
+        $mono = new Mono(__DIR__ . '/templates');
 
-        $mono->addRoute('GET', '/', function (RequestInterface $request) use ($mono) {
+        $mono->addRoute('GET', '/', function () use ($mono) {
             return $mono->createResponse('Hello, world!');
         });
 
@@ -43,7 +43,7 @@ class MonoTest extends TestCase
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['REQUEST_URI'] = '/books/123';
 
-        $mono = new Mono(__DIR__);
+        $mono = new Mono(__DIR__ . '/templates');
 
         $mono->addRoute('GET', '/books/{book}', function (RequestInterface $request, string $book) use ($mono) {
             return $mono->createResponse('Book: ' . $book);
@@ -59,7 +59,7 @@ class MonoTest extends TestCase
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['REQUEST_URI'] = '/';
 
-        $mono = new Mono(__DIR__);
+        $mono = new Mono(__DIR__ . '/templates');
 
         $mono->addRoute('GET', '/', function () use ($mono) {
             return $mono->render('index.html.twig', [
@@ -77,7 +77,7 @@ class MonoTest extends TestCase
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['REQUEST_URI'] = '/';
 
-        $mono = new Mono(__DIR__);
+        $mono = new Mono(__DIR__ . '/templates');
 
         $mono->addRoute('GET', '/', function () use ($mono) {
             $demoClass = $mono->get(NodeTraverser::class);
@@ -95,10 +95,28 @@ class MonoTest extends TestCase
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['REQUEST_URI'] = '/';
 
-        $mono = new Mono(__DIR__);
+        $mono = new Mono(__DIR__ . '/templates');
 
         $mono->addRoute('GET', '/', function () {
             return 'OK';
+        });
+
+        $this->expectException(\RuntimeException::class);
+
+        $mono->run();
+    }
+
+    public function testTwigRenderWithoutTemplateFolderThrowsError(): void
+    {
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['REQUEST_URI'] = '/';
+
+        $mono = new Mono();
+
+        $mono->addRoute('GET', '/', function () use ($mono) {
+            return $mono->render('index.html.twig', [
+                'output' => 'Hello, world!',
+            ]);
         });
 
         $this->expectException(\RuntimeException::class);
