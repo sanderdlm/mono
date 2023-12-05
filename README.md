@@ -52,7 +52,8 @@ class BookController
 
 $mono = new Mono();
 
-$mono->addRoute('GET', '/books/{book}', new BookController($mono));
+// By fetching the controller from the container, it will autowire all constructor parameters.
+$mono->addRoute('GET', '/books/{book}', $mono->get(BookController::class));
 
 $mono->run();
 ```
