@@ -8,13 +8,15 @@ a PSR-7 implementation and Twig templating.
 ## Routing
 Mono's routing implementation shares 90% of its code with the ['basic usage example'](https://github.com/nikic/FastRoute#usage) from the FastRoute documentation.
 
-You use `$mono->addRoute()` to add all your routes. Same method signature as the FastRoute method. Route handlers are closures by default, since this is a single-page framework.
+You use `$mono->addRoute()` to add all your routes. Same method signature as the FastRoute method. Route handlers are closures by default, since this is mainly intended as a single-page framework, but you can use invokable controllers as well.
 
 Read about the route pattern in the [FastRoute documentation](https://github.com/nikic/FastRoute#defining-routes). The entered path is passed directly to FastRoute.
 
 The first argument to the closure is the always current request, which is a [PSR-7 ServerRequestInterface](https://github.com/php-fig/http-message/blob/master/src/ServerRequestInterface.php) object. After that, the next arguments are the route parameters.
 
 When `$mono->run()` is called, the current request is matched against the routes you added, the closure is invoked and the response is emitted.
+
+### Example with closure
 
 ```php
 <?php
@@ -28,6 +30,32 @@ $mono->addRoute('GET', '/books/{book}', function(RequestInterface $request, stri
 $mono->run();
 ```
 
+### Example with controller
+```php
+<?php
+
+class BookController
+{
+    public function __construct(
+        private readonly Mono $mono
+    ) {
+    }
+
+    public function __invoke(RequestInterface $request, string $book): ResponseInterface
+    {
+        return $this->mono->createResponse('Book: ' . $book');
+    }
+}
+```
+```php
+<?php
+
+$mono = new Mono();
+
+$mono->addRoute('GET', '/books/{book}', new BookController($mono));
+
+$mono->run();
+```
 ## DI
 
 When a Mono object is created, it constructs a basic PHP-DI container with default configuration. This means dependencies from your vendor folder are autowired.

@@ -27,13 +27,18 @@ final class Mono
 
     public function __construct(string $templateFolder = null)
     {
+        $this->container = new Container();
+
         if ($templateFolder !== null && file_exists($templateFolder)) {
             $loader = new FilesystemLoader($templateFolder);
             $this->twig = new Environment($loader, ['debug' => true]);
             $this->twig->addExtension(new DebugExtension());
-        }
 
-        $this->container = new Container();
+            /*
+             * This allows autowired controllers to access the original Mono object.
+             */
+            $this->container->set(Mono::class, $this);
+        }
     }
 
     public function addRoute(string $method, string $path, callable $handler): void

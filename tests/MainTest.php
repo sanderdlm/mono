@@ -123,4 +123,46 @@ class MainTest extends TestCase
 
         $mono->run();
     }
+
+    public function testRouteWithController(): void
+    {
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['REQUEST_URI'] = '/test/foobar';
+
+        $mono = new Mono();
+
+        $mono->addRoute('GET', '/test/{name}', new TestController($mono));
+
+        $output = $this->catchOutput(fn() => $mono->run());
+
+        $this->assertEquals('Hello foobar!', $output);
+    }
+
+    public function testRouteWithAutowiredController(): void
+    {
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['REQUEST_URI'] = '/test/autowired';
+
+        $mono = new Mono();
+
+        $mono->addRoute('GET', '/test/{name}', new TestController($mono));
+
+        $output = $this->catchOutput(fn() => $mono->run());
+
+        $this->assertEquals('Hello autowired!', $output);
+    }
+
+    public function testRouteWithAutowiredControllerAndTwig(): void
+    {
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['REQUEST_URI'] = '/test/autotwig';
+
+        $mono = new Mono(__DIR__ . '/templates');
+
+        $mono->addRoute('GET', '/test/{name}', $mono->get(TwigController::class));
+
+        $output = $this->catchOutput(fn() => $mono->run());
+
+        $this->assertEquals('Hello autotwig!', $output);
+    }
 }
