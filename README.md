@@ -98,5 +98,3 @@ $mono->addRoute('GET', '/example', function() use ($mono) {
 
 $mono->run();
 ````
-
-Templates go in the `/templates` folder in the project root.
