@@ -80,22 +80,22 @@ class MainTest extends TestCase
         $mono = new Mono(__DIR__ . '/templates');
 
         $mono->addRoute('GET', '/', function () use ($mono) {
-            $demoClass = $mono->get(NodeTraverser::class);
+            $demoClass = $mono->get(Mono::class);
 
-            $this->assertInstanceOf(NodeTraverser::class, $demoClass);
+            $this->assertInstanceOf(Mono::class, $demoClass);
 
-            return $mono->createResponse('OK');
+            return $mono->createResponse('');
         });
 
         $mono->run();
     }
 
-    public function testInvalidResponseThrowError(): void
+    public function testInvalidResponseInDebugThrowError(): void
     {
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['REQUEST_URI'] = '/';
 
-        $mono = new Mono(__DIR__ . '/templates');
+        $mono = new Mono(__DIR__ . '/templates', true);
 
         $mono->addRoute('GET', '/', function () {
             return 'OK';
@@ -106,12 +106,28 @@ class MainTest extends TestCase
         $mono->run();
     }
 
+    public function testDebugFalseReturnsGenericErrorMessage(): void
+    {
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['REQUEST_URI'] = '/';
+
+        $mono = new Mono(__DIR__ . '/templates');
+
+        $mono->addRoute('GET', '/', function () {
+            throw new \Exception('Developer error');
+        });
+
+        $output = $this->catchOutput(fn() => $mono->run());
+
+        $this->assertEquals('Something went wrong', $output);
+    }
+
     public function testTwigRenderWithoutTemplateFolderThrowsError(): void
     {
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['REQUEST_URI'] = '/';
 
-        $mono = new Mono();
+        $mono = new Mono(debug: true);
 
         $mono->addRoute('GET', '/', function () use ($mono) {
             return $mono->render('index.html.twig', [
