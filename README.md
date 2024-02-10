@@ -129,3 +129,8 @@ $mono->addRoute('GET', '/example', function() use ($mono) {
 
 $mono->run();
 ````
+
+## Debug mode
+Mono has a debug mode that will catch all errors by default and show a generic 500 response.
+
+When developing, you can disable this mode by passing `false` as the second argument to the Mono constructor. This will show the actual error messages and allow you to use `dump` inside your Twig templates.

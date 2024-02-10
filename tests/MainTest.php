@@ -123,7 +123,7 @@ class MainTest extends TestCase
 
         $output = $this->catchOutput(fn() => $mono->run());
 
-        $this->assertEquals('An error occurred: Developer error', $output);
+        $this->assertEquals('Something went wrong!', $output);
     }
 
     public function testTwigRenderWithoutTemplateFolderThrowsError(): void

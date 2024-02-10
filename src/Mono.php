@@ -45,9 +45,7 @@ final class Mono
                 $this->twig->addExtension(new DebugExtension());
             }
 
-            /*
-             * This allows autowired controllers to access the original Mono object.
-             */
+            // This allows autowired controllers to access the original Mono object.
             $this->container->set(Mono::class, $this);
         }
     }
@@ -62,7 +60,7 @@ final class Mono
                     throw $e;
                 }
 
-                return $this->createResponse(500, 'An error occurred: ' . $e->getMessage());
+                return $this->createResponse(500, 'Something went wrong!');
             }
         };
 
@@ -164,11 +162,11 @@ final class Mono
     {
         $response = (new ResponseFactory())->createResponse($status);
 
-        if ($body !== null) {
-            return $response->withBody((new StreamFactory())->createStream($body));
-        } else {
+        if ($body === null) {
             return $response;
         }
+
+        return $response->withBody((new StreamFactory())->createStream($body));
     }
 
     public function run(): void
