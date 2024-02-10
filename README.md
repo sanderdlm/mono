@@ -1,14 +1,15 @@
 # Mono
 
-Mono is a tiny, single-class PHP framework for writing single-page PHP apps.
-It shines when quickly developing small tools with limited scope.
-In +- 100 LOC, you get basic routing (using FastRoute), DI (using PHP-DI),
-a PSR-7 implementation and Twig templating.
+Mono is a tiny, single-class PHP framework that combines multiple great projects from the PHP ecosystem to bring you as many features as possible in a small package.
 
-## Routing
-Mono's routing implementation shares 90% of its code with the ['basic usage example'](https://github.com/nikic/FastRoute#usage) from the FastRoute documentation.
+In +-180 LOC, you get:
+1. Routing (using FastRoute)
+2. Dependency injection (using PHP-DI)
+3. Middlewares (using relay/relay)
+4. Templating (using Twig)
 
-You use `$mono->addRoute()` to add all your routes. Same method signature as the FastRoute method. Route handlers are closures by default, since this is mainly intended as a single-page framework, but you can use invokable controllers as well.
+## 1. Routing
+You use `$mono->addRoute()` to add all your routes. Same method signature as the underlying FastRoute method. Route handlers are closures by default, since this is mainly intended as a framework for small apps, but you can use invokable controllers as well.
 
 Read about the route pattern in the [FastRoute documentation](https://github.com/nikic/FastRoute#defining-routes). The entered path is passed directly to FastRoute.
 
@@ -16,7 +17,7 @@ The first argument to the closure is the always current request, which is a [PSR
 
 When `$mono->run()` is called, the current request is matched against the routes you added, the closure is invoked and the response is emitted.
 
-### Example with closure
+### 1.1 Example with closure
 
 ```php
 <?php
@@ -24,13 +25,13 @@ When `$mono->run()` is called, the current request is matched against the routes
 $mono = new Mono();
 
 $mono->addRoute('GET', '/books/{book}', function(RequestInterface $request, string $book) use ($mono) {
-    return $mono->createResponse('Book: ' . $book);
+    return $mono->createResponse(200, 'Book: ' . $book);
 });
 
 $mono->run();
 ```
 
-### Example with controller
+### 1.2 Example with controller
 ```php
 <?php
 
@@ -43,7 +44,7 @@ class BookController
 
     public function __invoke(RequestInterface $request, string $book): ResponseInterface
     {
-        return $this->mono->createResponse('Book: ' . $book');
+        return $this->mono->createResponse(200, 'Book: ' . $book');
     }
 }
 ```
@@ -57,7 +58,7 @@ $mono->addRoute('GET', '/books/{book}', $mono->get(BookController::class));
 
 $mono->run();
 ```
-## DI
+## 2. Dependency injection
 
 When a Mono object is created, it constructs a basic PHP-DI container with default configuration. This means dependencies from your vendor folder are autowired.
 
@@ -71,13 +72,43 @@ $mono = new Mono();
 $mono->addRoute('GET', '/example', function() use ($mono) {
     $result = $mono->get(SomeDependency::class)->doSomething();
     
-    return $mono->createResponse(json_encode($result));
+    return $mono->createResponse(200, json_encode($result));
 });
 
 $mono->run();
 ```
 
-## Twig
+## 3. Middleware
+Mono is built as a middleware stack application. The default flow is:
+
+- Error handling
+- Routing (route is matched to a handler)
+- *Your custom middlewares*
+- Request handling (the route handler is invoked)
+
+You can add middleware to the stack with the `addMiddleware()` method. Middleware are either a callable or a class implementing the `MiddlewareInterface` interface. The middleware are executed in the order they are added.
+
+```php
+<?php
+
+$mono = new Mono();
+
+$mono->addMiddleware(function (ServerRequestInterface $request, callable $next) {
+    // Do something before the request is handled
+    
+    return $next($request);
+});
+
+$mono->addMiddleware(function (ServerRequestInterface $request, callable $next) {
+    $response = $next($request);
+
+    // Do something after the request is handled
+
+    return $response->withHeader('X-Test', 'Hello, world!');
+});
+````
+
+## 4. Templating
 
 Mono comes with Twig out-of-the-box. If you want to use Twig, you have to pass the path to your templates folder in the Mono constructor.
 
