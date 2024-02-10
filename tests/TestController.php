@@ -19,6 +19,6 @@ class TestController
             throw new \RuntimeException('Autowiring broken in test controller.');
         }
 
-        return $this->mono->createResponse('Hello ' . $name . '!');
+        return $this->mono->createResponse(200, 'Hello ' . $name . '!');
     }
 }

@@ -6,6 +6,10 @@ use Mono\Mono;
 use PhpParser\NodeTraverser;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
 class MainTest extends TestCase
 {
@@ -30,7 +34,7 @@ class MainTest extends TestCase
         $mono = new Mono(__DIR__ . '/templates');
 
         $mono->addRoute('GET', '/', function () use ($mono) {
-            return $mono->createResponse('Hello, world!');
+            return $mono->createResponse(200, 'Hello, world!');
         });
 
         $output = $this->catchOutput(fn() => $mono->run());
@@ -46,7 +50,7 @@ class MainTest extends TestCase
         $mono = new Mono(__DIR__ . '/templates');
 
         $mono->addRoute('GET', '/books/{book}', function (RequestInterface $request, string $book) use ($mono) {
-            return $mono->createResponse('Book: ' . $book);
+            return $mono->createResponse(200, 'Book: ' . $book);
         });
 
         $output = $this->catchOutput(fn() => $mono->run());
@@ -84,7 +88,7 @@ class MainTest extends TestCase
 
             $this->assertInstanceOf(Mono::class, $demoClass);
 
-            return $mono->createResponse('');
+            return $mono->createResponse(200, '');
         });
 
         $mono->run();
@@ -119,7 +123,7 @@ class MainTest extends TestCase
 
         $output = $this->catchOutput(fn() => $mono->run());
 
-        $this->assertEquals('Something went wrong', $output);
+        $this->assertEquals('An error occurred: Developer error', $output);
     }
 
     public function testTwigRenderWithoutTemplateFolderThrowsError(): void
@@ -180,5 +184,51 @@ class MainTest extends TestCase
         $output = $this->catchOutput(fn() => $mono->run());
 
         $this->assertEquals('Hello autotwig!', $output);
+    }
+
+    public function testCallableMiddleware(): void
+    {
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['REQUEST_URI'] = '/';
+
+        $mono = new Mono(__DIR__ . '/templates', true);
+
+        $mono->addMiddleware(function (ServerRequestInterface $request, callable $next) {
+            $response = $next($request);
+
+            return $response->withHeader('X-Test', 'Hello, world!');
+        });
+
+        $mono->addRoute('GET', '/', function (ServerRequestInterface $request) use ($mono) {
+            return $mono->createResponse(200, 'Hello, world!');
+        });
+
+        $output = $this->catchOutput(fn() => $mono->run());
+
+        $this->assertEquals('Hello, world!', $output);
+    }
+
+    public function testRequestHandlerIsAvailableInMiddleware(): void
+    {
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['REQUEST_URI'] = '/';
+
+        $mono = new Mono(__DIR__ . '/templates', true);
+
+        $mono->addMiddleware(function (ServerRequestInterface $request, callable $next) {
+            $handler = $request->getAttribute('request-handler');
+
+            $this->assertNotNull($handler);
+
+            return $next($request);
+        });
+
+        $mono->addRoute('GET', '/', function (ServerRequestInterface $request) use ($mono) {
+            return $mono->createResponse(200, 'Hello, world!');
+        });
+
+        $output = $this->catchOutput(fn() => $mono->run());
+
+        $this->assertEquals('Hello, world!', $output);
     }
 }
