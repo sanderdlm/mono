@@ -165,7 +165,7 @@ class MainTest extends TestCase
 
         $mono = new Mono();
 
-        $mono->addRoute('GET', '/test/{name}', new TestController($mono));
+        $mono->addRoute('GET', '/test/{name}', $mono->get(TestController::class));
 
         $output = $this->catchOutput(fn() => $mono->run());
 
@@ -193,10 +193,10 @@ class MainTest extends TestCase
 
         $mono = new Mono(__DIR__ . '/templates', true);
 
-        $mono->addMiddleware(function (ServerRequestInterface $request, callable $next) {
+        $mono->addMiddleware(function (ServerRequestInterface $request, callable $next) use ($mono) {
             $response = $next($request);
 
-            return $response->withHeader('X-Test', 'Hello, world!');
+            return $mono->createResponse(200, 'Some new content');
         });
 
         $mono->addRoute('GET', '/', function (ServerRequestInterface $request) use ($mono) {
@@ -205,7 +205,7 @@ class MainTest extends TestCase
 
         $output = $this->catchOutput(fn() => $mono->run());
 
-        $this->assertEquals('Hello, world!', $output);
+        $this->assertEquals('Some new content', $output);
     }
 
     public function testRequestHandlerIsAvailableInMiddleware(): void

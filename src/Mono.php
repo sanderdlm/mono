@@ -30,7 +30,7 @@ final class Mono
     /**
      * @var array <MiddlewareInterface|callable>
      */
-    private array $middlewares = [];
+    private array $middleware = [];
     private bool $debug;
 
     public function __construct(string $templateFolder = null, bool $debug = false)
@@ -84,10 +84,6 @@ final class Mono
                 return $this->createResponse(405)->withHeader('Allow', implode(', ', $route[1]));
             }
 
-            foreach ($route[2] as $name => $value) {
-                $request = $request->withAttribute($name, $value);
-            }
-
             $request = $request
                 ->withAttribute('request-handler', $route[1])
                 ->withAttribute('request-parameters', $route[2]);
@@ -112,10 +108,10 @@ final class Mono
             return $response;
         };
 
-        $this->middlewares = [
+        $this->middleware = [
             $errorHandlingMiddleware,
             $routingMiddleware,
-            ...$this->middlewares,
+            ...$this->middleware,
             $requestHandlerMiddleware
         ];
     }
@@ -131,7 +127,7 @@ final class Mono
 
     public function addMiddleware(MiddlewareInterface|callable $middleware): void
     {
-        $this->middlewares[] = $middleware;
+        $this->middleware[] = $middleware;
     }
 
     /**
@@ -173,7 +169,7 @@ final class Mono
     {
         $this->initMiddleware();
 
-        $requestHandler = new Relay($this->middlewares);
+        $requestHandler = new Relay($this->middleware);
         $response = $requestHandler->handle(ServerRequestFactory::fromGlobals());
 
         (new SapiEmitter())->emit($response);
