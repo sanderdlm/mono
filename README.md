@@ -134,3 +134,59 @@ $mono->run();
 Mono has a debug mode that will catch all errors by default and show a generic 500 response.
 
 When developing, you can disable this mode by passing `false` as the second argument to the Mono constructor. This will show the actual error messages and allow you to use `dump` inside your Twig templates.
+
+## Folder structure & project setup
+
+1. Create a new folder for your project.
+2. Run `composer require sanderdlm/mono`.
+3. Create a `public` folder in the root of your project. Add an `index.php` file. There is a "Hello world" example below.
+4. Optionally, create a `templates` folder in the root of your project. Add a `home.twig` file. There is an example below.
+5. Run `php -S localhost:8000 -t public` to start the built-in PHP server.
+6. Start developing your idea!
+
+`public/index.php`:
+```php
+
+<?php
+
+declare(strict_types=1);
+
+use Mono\Mono;
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+$mono = new Mono(__DIR__.'/../templates');
+
+$mono->addRoute('GET', '/', function() use ($mono) {
+    return $mono->render('home.twig', [
+        'message' => 'Hello world!',
+    ]);
+});
+
+$mono->run();
+```
+
+`templates/home.twig`:
+```twig
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Home</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+    {{ message }}
+</body>
+</html>
+```
+
+If you're planning to keep things simple, you can work straight in your index.php. If you need to define multiple files/classes, you can add a `src` folder and add the following PSR-4 autoloading snippet to your `composer.json`:
+```json
+"autoload": {
+    "psr-4": {
+        "App\\": "src/"
+    }
+},
+```
+You can now access all of your classes in the `src` folder from your DI container (and autowire them!).
