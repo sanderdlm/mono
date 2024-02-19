@@ -8,6 +8,12 @@ In +-180 LOC, you get:
 3. Middlewares (using relay/relay)
 4. Templating (using Twig)
 
+Take a look at the [source code](https://github.com/sanderdlm/mono/blob/main/src/Mono.php). It's only a single file and has comments explaining everything going on.
+
+Mono is intended as a proof-of-concept for small, modern PHP apps. By implementing PSRs and using battle-tested libraries, you can go very far with a small footprint!
+
+If this exact boilerplate isn't exactly what you need, copy `Mono.php` into your own project, rename it, swap out dependencies, change configuration, etc... to reach your desired stack.
+
 ## 1. Routing
 You use `$mono->addRoute()` to add all your routes. Same method signature as the underlying FastRoute method. Route handlers are closures by default, since this is mainly intended as a framework for small apps, but you can use invokable controllers as well.
 
