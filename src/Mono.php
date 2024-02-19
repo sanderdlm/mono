@@ -33,12 +33,15 @@ final class Mono
     private array $middleware = [];
     private bool $debug;
 
-    public function __construct(string $templateFolder = null, bool $debug = false)
-    {
+    public function __construct(
+        string $templateFolder = null,
+        bool $debug = false,
+        ContainerInterface $container = null
+    ) {
         // Set the debug mode on our Mono object
         $this->debug = $debug;
         // Initialize a PHP-DI container with default configuration
-        $this->container = new Container();
+        $this->container = $container ?? new Container();
 
         // If a template folder was passed, initialize Twig
         if ($templateFolder !== null && file_exists($templateFolder)) {

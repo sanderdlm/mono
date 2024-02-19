@@ -3,16 +3,32 @@
 Mono is a tiny, single-class PHP framework that combines multiple great projects from the PHP ecosystem to bring you as many features as possible in a small package.
 
 In +-180 LOC, you get:
-1. Routing (using FastRoute)
-2. Dependency injection (using PHP-DI)
-3. Middlewares (using relay/relay)
-4. Templating (using Twig)
+1. Routing (using [nikic/FastRoute](https://github.com/nikic/FastRoute))
+2. Dependency injection (using [php-di/php-di](https://github.com/PHP-DI/PHP-DI))
+3. Middlewares (using [relay/relay](https://github.com/relayphp/Relay.Relay))
+4. Templating (using [twigphp/wig](https://github.com/twigphp/Twig))
 
-Take a look at the [source code](https://github.com/sanderdlm/mono/blob/main/src/Mono.php). It's only a single file and has comments explaining everything going on.
+Mono is intended as a proof-of-concept for small, modern PHP apps. Its goal is to show how far you can go by combining battle-tested libraries & PSR implementations.
 
-Mono is intended as a proof-of-concept for small, modern PHP apps. By implementing PSRs and using battle-tested libraries, you can go very far with a small footprint!
 
-If this exact boilerplate isn't exactly what you need, copy `Mono.php` into your own project, rename it, swap out dependencies, change configuration, etc... to reach your desired stack.
+#### Hello world
+```php
+<?php
+
+$mono = new Mono();
+
+$mono->addRoute('GET', '/hello/{name}', function(ServerRequestInterface $request, string $name) use ($mono) {
+    return $mono->createResponse(200, 'Hello, ' . $name . '!');
+});
+
+$mono->run();
+```
+
+People familiar with [Slim](https://github.com/slimphp/Slim) will definitely notice the similarities.
+
+If you're interested, please take a look at the [source code](https://github.com/sanderdlm/mono/blob/main/src/Mono.php). It's only a single file and has comments explaining everything going on.
+
+> If this exact boilerplate isn't exactly what you need, copy `Mono.php` into your own project, rename it, swap out dependencies, change configuration, etc... to reach your desired stack.
 
 ## 1. Routing
 You use `$mono->addRoute()` to add all your routes. Same method signature as the underlying FastRoute method. Route handlers are closures by default, since this is mainly intended as a framework for small apps, but you can use invokable controllers as well.
@@ -30,7 +46,7 @@ When `$mono->run()` is called, the current request is matched against the routes
 
 $mono = new Mono();
 
-$mono->addRoute('GET', '/books/{book}', function(RequestInterface $request, string $book) use ($mono) {
+$mono->addRoute('GET', '/books/{book}', function(ServerRequestInterface $request, string $book) use ($mono) {
     return $mono->createResponse(200, 'Book: ' . $book);
 });
 
@@ -48,7 +64,7 @@ class BookController
     ) {
     }
 
-    public function __invoke(RequestInterface $request, string $book): ResponseInterface
+    public function __invoke(ServerRequestInterface $request, string $book): ResponseInterface
     {
         return $this->mono->createResponse(200, 'Book: ' . $book');
     }
@@ -66,7 +82,7 @@ $mono->run();
 ```
 ## 2. Dependency injection
 
-When a Mono object is created, it constructs a basic PHP-DI container with default configuration. This means dependencies from your vendor folder are autowired.
+When a Mono object is created, it constructs a basic PHP-DI container with default configuration. This means that any loaded classes (for example through PSR-4) can be autowired or pulled from the container manually.
 
 You can fetch instances from the container with the `get()` method on your Mono object.
 
@@ -74,6 +90,28 @@ You can fetch instances from the container with the `get()` method on your Mono 
 <?php
 
 $mono = new Mono();
+
+$mono->addRoute('GET', '/example', function() use ($mono) {
+    $result = $mono->get(SomeDependency::class)->doSomething();
+    
+    return $mono->createResponse(200, json_encode($result));
+});
+
+$mono->run();
+```
+
+### Custom container
+If you need to define custom definitions, you can pass a custom container to the Mono constructor. See [the PHP-DI documentation](https://php-di.org/doc/getting-started.html#2-create-the-container) for more information.
+
+```php
+<?php
+
+// Custom container
+$builder = new DI\ContainerBuilder();
+$builder->... // Add some custom definitions
+$container = $builder->build();
+
+$mono = new Mono(container: $container);
 
 $mono->addRoute('GET', '/example', function() use ($mono) {
     $result = $mono->get(SomeDependency::class)->doSomething();
@@ -99,8 +137,11 @@ You can add middleware to the stack with the `addMiddleware()` method. Middlewar
 
 $mono = new Mono();
 
-$mono->addMiddleware(function (ServerRequestInterface $request, callable $next) {
+$mono->addMiddleware(function (ServerRequestInterface $request, callable $next) use ($mono) {
     // Do something before the request is handled
+    if ($request->getUri()->getPath() === '/example') {
+        return $mono->createResponse(403, 'Forbidden');
+    }
     
     return $next($request);
 });
@@ -109,11 +150,11 @@ $mono->addMiddleware(function (ServerRequestInterface $request, callable $next) 
     $response = $next($request);
 
     // Do something after the request is handled
-
     return $response->withHeader('X-Test', 'Hello, world!');
 });
 ````
 
+You can find a bunch of great PSR-15 compatible middlewares already written in the [middlewares/psr15-middlewares](https://github.com/middlewares/psr15-middlewares) project. These can be plugged into Mono and used straight away.
 ## 4. Templating
 
 Mono comes with Twig out-of-the-box. If you want to use Twig, you have to pass the path to your templates folder in the Mono constructor.
@@ -142,6 +183,8 @@ Mono has a debug mode that will catch all errors by default and show a generic 5
 When developing, you can disable this mode by passing `false` as the second argument to the Mono constructor. This will show the actual error messages and allow you to use `dump` inside your Twig templates.
 
 ## Folder structure & project setup
+
+Getting started with a new project is fast. Follow these steps:
 
 1. Create a new folder for your project.
 2. Run `composer require sanderdlm/mono`.
