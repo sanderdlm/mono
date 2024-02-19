@@ -36,7 +36,7 @@ final class Mono
     public function __construct(
         string $templateFolder = null,
         bool $debug = false,
-        ContainerInterface $container = null
+        Container $container = null
     ) {
         // Set the debug mode on our Mono object
         $this->debug = $debug;

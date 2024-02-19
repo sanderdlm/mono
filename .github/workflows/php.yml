@@ -23,7 +23,7 @@ jobs:
       uses: "ramsey/composer-install@v2"
 
     - name: "Run a static analysis with phpstan/phpstan"
-      run: "vendor/bin/phpstan analyse"
+      run: "vendor/bin/phpstan analyse --memory-limit=2G"
       
   phpcs:
     runs-on: "ubuntu-latest"
