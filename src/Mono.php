@@ -57,7 +57,7 @@ final class Mono
         }
     }
 
-    public function addRoute(string $method, string $path, callable $handler): void
+    public function addRoute(string|array $method, string $path, callable $handler): void
     {
         $this->routes[] = [
             'method' => $method,
