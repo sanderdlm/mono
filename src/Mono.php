@@ -24,7 +24,7 @@ final class Mono
     private ContainerInterface $container;
     private ?Environment $twig = null;
     /**
-     * @var array <array{method: string, path: string, handler: callable}>
+     * @var array <array{method: string|string[], path: string, handler: callable}>
      */
     private array $routes = [];
     /**
@@ -57,6 +57,9 @@ final class Mono
         }
     }
 
+    /**
+     * @param string|string[] $method
+     */
     public function addRoute(string|array $method, string $path, callable $handler): void
     {
         $this->routes[] = [
