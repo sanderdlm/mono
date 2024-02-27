@@ -2,14 +2,11 @@
 
 namespace Mono\Test;
 
+use Mono\MapTo;
 use Mono\Mono;
-use PhpParser\NodeTraverser;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Server\MiddlewareInterface;
-use Psr\Http\Server\RequestHandlerInterface;
 
 class MainTest extends TestCase
 {
@@ -149,7 +146,7 @@ class MainTest extends TestCase
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['REQUEST_URI'] = '/test/foobar';
 
-        $mono = new Mono();
+        $mono = new Mono('');
 
         $mono->addRoute('GET', '/test/{name}', new TestController($mono));
 
@@ -163,7 +160,7 @@ class MainTest extends TestCase
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['REQUEST_URI'] = '/test/autowired';
 
-        $mono = new Mono();
+        $mono = new Mono('', true);
 
         $mono->addRoute('GET', '/test/{name}', $mono->get(TestController::class));
 
@@ -224,6 +221,32 @@ class MainTest extends TestCase
         });
 
         $mono->addRoute('GET', '/', function (ServerRequestInterface $request) use ($mono) {
+            return $mono->createResponse(200, 'Hello, world!');
+        });
+
+        $output = $this->catchOutput(fn() => $mono->run());
+
+        $this->assertEquals('Hello, world!', $output);
+    }
+
+    public function testPostRequestMappingToObject(): void
+    {
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+        $_SERVER['REQUEST_URI'] = '/book';
+        $_POST['title'] = 'Moby dick';
+        $_POST['gender'] = 'male';
+        $_POST['published'] = (new \DateTimeImmutable('2014/05/12'))->format(DATE_ATOM);
+
+        $mono = new Mono(__DIR__ . '/templates', true);
+
+        $mono->addRoute('POST', '/book', function (
+            ServerRequestInterface $request,
+            #[MapTo] BookDataTransferObject $bookDataTransferObject
+        ) use ($mono) {
+            $this->assertEquals('Moby dick', $bookDataTransferObject->title);
+            $this->assertEquals(Gender::MALE, $bookDataTransferObject->gender);
+            $this->assertEquals(new \DateTimeImmutable('2014/05/12'), $bookDataTransferObject->published);
+
             return $mono->createResponse(200, 'Hello, world!');
         });
 
