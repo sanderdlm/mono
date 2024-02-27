@@ -4,16 +4,21 @@ declare(strict_types=1);
 
 namespace Mono;
 
+use Attribute;
+use CuyZ\Valinor\Mapper\Source\Source;
+use CuyZ\Valinor\Mapper\TreeMapper;
+use CuyZ\Valinor\MapperBuilder;
 use DI\Container;
 use FastRoute;
 use Laminas\Diactoros\ResponseFactory;
+use Laminas\Diactoros\ServerRequest;
 use Laminas\Diactoros\ServerRequestFactory;
 use Laminas\Diactoros\StreamFactory;
 use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
-use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
+use ReflectionNamedType;
 use Relay\Relay;
 use Twig\Environment;
 use Twig\Extension\DebugExtension;
@@ -21,7 +26,7 @@ use Twig\Loader\FilesystemLoader;
 
 final class Mono
 {
-    private ContainerInterface $container;
+    private Container $container;
     private ?Environment $twig = null;
     /**
      * @var array <array{method: string|string[], path: string, handler: callable}>
@@ -54,6 +59,14 @@ final class Mono
             // Pass the Mono object to the container.
             // This allows autowired controllers access to it.
             $this->container->set(Mono::class, $this);
+        }
+
+        if (!$this->container->has(TreeMapper::class)) {
+            $mapper = (new MapperBuilder())
+                ->enableFlexibleCasting()
+                ->mapper();
+
+            $this->container->set(TreeMapper::class, $mapper);
         }
     }
 
@@ -170,12 +183,47 @@ final class Mono
         /*
          * Middleware to execute the handler and return a response.
          */
-        $requestHandlerMiddleware = function (ServerRequestInterface $request, callable $next): ResponseInterface {
+        $requestHandlerMiddleware = function (ServerRequest $request, callable $next): ResponseInterface {
             $requestHandler = $request->getAttribute('request-handler');
             $parameters = $request->getAttribute('request-parameters');
+            $body = $request->getParsedBody();
 
             assert(is_callable($requestHandler), 'Invalid request handler.');
             assert(is_array($parameters), 'Invalid request parameters.');
+            assert(is_array($body), 'Invalid request body.');
+
+            if ($requestHandler instanceof \Closure) {
+                $reflector = new \ReflectionFunction($requestHandler);
+            } elseif (is_object($requestHandler)) {
+                $reflectedClass = new \ReflectionClass($requestHandler);
+                $reflector = $reflectedClass->getMethod('__invoke');
+            } else {
+                throw new \RuntimeException('Invalid request handler passed. Must be a closure or an invokable class.');
+            }
+
+            foreach ($reflector->getParameters() as $parameter) {
+                $attributes = $parameter->getAttributes();
+
+                if (count($attributes) > 0) {
+                    foreach ($attributes as $attribute) {
+                        if ($attribute->getName() === MapTo::class) {
+                            if (!$parameter->getType() instanceof ReflectionNamedType) {
+                                throw new \RuntimeException(sprintf(
+                                    'Missing class/type on parameter with MapTo attribute: %s',
+                                    $parameter->getName()
+                                ));
+                            }
+
+                            $dto = $parameter->getType()->getName();
+
+                            $parameters[$parameter->getName()] = $this->container->get(TreeMapper::class)
+                                ->map($dto, Source::array($body));
+
+                            break;
+                        }
+                    }
+                }
+            }
 
             // Execute the handler and get the response back
             $response = call_user_func_array($requestHandler, [$request, ...$parameters]);
@@ -207,4 +255,10 @@ final class Mono
         // 💨
         (new SapiEmitter())->emit($response);
     }
+}
+
+// phpcs:disable
+#[Attribute]
+class MapTo
+{
 }
