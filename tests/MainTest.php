@@ -149,7 +149,7 @@ class MainTest extends TestCase
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['REQUEST_URI'] = '/test/foobar';
 
-        $mono = new Mono('');
+        $mono = new Mono();
 
         $mono->addRoute('GET', '/test/{name}', new TestController($mono));
 
@@ -163,7 +163,7 @@ class MainTest extends TestCase
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['REQUEST_URI'] = '/test/autowired';
 
-        $mono = new Mono('', true);
+        $mono = new Mono();
 
         $mono->addRoute('GET', '/test/{name}', $mono->get(TestController::class));
 
