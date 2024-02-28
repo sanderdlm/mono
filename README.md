@@ -178,7 +178,9 @@ $mono->addRoute('GET', '/example', function() use ($mono) {
 $mono->run();
 ````
 ## 5. Request -> object mapping with `#[MapTo]` attribute
-A fan-favourite feature from Symfony 6.3. So good, we just had to implement it.
+A fan-favourite feature from [Symfony 6.3](https://symfony.com/blog/new-in-symfony-6-3-mapping-request-data-to-typed-objects). So good, we just had to implement it.
+
+Add the `#[MapTo]` attribute to a parameter in your route handler and the request body will be mapped to an instance of the class you specify.
 ```php
 <?php
 
