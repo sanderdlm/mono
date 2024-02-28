@@ -2,14 +2,14 @@
 
 namespace Mono\Test;
 
+use CuyZ\Valinor\Mapper\TreeMapper;
+use CuyZ\Valinor\MapperBuilder;
+use DI\ContainerBuilder;
+use Mono\MapTo;
 use Mono\Mono;
-use PhpParser\NodeTraverser;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Server\MiddlewareInterface;
-use Psr\Http\Server\RequestHandlerInterface;
 
 class MainTest extends TestCase
 {
@@ -230,5 +230,59 @@ class MainTest extends TestCase
         $output = $this->catchOutput(fn() => $mono->run());
 
         $this->assertEquals('Hello, world!', $output);
+    }
+
+    public function testPostRequestMappingToObject(): void
+    {
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+        $_SERVER['REQUEST_URI'] = '/book';
+        $_POST['title'] = 'Moby dick';
+        $_POST['gender'] = 'male';
+        $_POST['published'] = (new \DateTimeImmutable('2014/05/12'))->format(DATE_ATOM);
+
+        $mono = new Mono(__DIR__ . '/templates', true);
+
+        $mono->addRoute('POST', '/book', function (
+            ServerRequestInterface $request,
+            #[MapTo] BookDataTransferObject $bookDataTransferObject
+        ) use ($mono) {
+            $this->assertEquals('Moby dick', $bookDataTransferObject->title);
+            $this->assertEquals(Gender::MALE, $bookDataTransferObject->gender);
+            $this->assertEquals(new \DateTimeImmutable('2014/05/12'), $bookDataTransferObject->published);
+
+            return $mono->createResponse(200, 'Hello, world!');
+        });
+
+        $output = $this->catchOutput(fn() => $mono->run());
+
+        $this->assertEquals('Hello, world!', $output);
+    }
+
+    public function testCustomContainer(): void
+    {
+        $someClass = new BookDataTransferObject(
+            'Testing with Sander',
+            Gender::MALE,
+            new \DateTimeImmutable(),
+            1
+        );
+
+        $containerBuilder = new ContainerBuilder();
+        $containerBuilder->useAutowiring(true);
+        $containerBuilder->addDefinitions([
+            BookDataTransferObject::class => $someClass
+        ]);
+
+        $mono = new Mono(
+            templateFolder: __DIR__ . '/../templates',
+            debug: true,
+            container: $containerBuilder->build()
+        );
+
+        $theSameClass = $mono->get(BookDataTransferObject::class);
+        $this->assertInstanceOf(BookDataTransferObject::class, $theSameClass);
+        $this->assertEquals('Testing with Sander', $theSameClass->title);
+        $this->assertEquals(Gender::MALE, $theSameClass->gender);
+        $this->assertEquals(1, $theSameClass->rating);
     }
 }

@@ -2,11 +2,12 @@
 
 Mono is a tiny, single-class PHP framework that combines multiple great projects from the PHP ecosystem to bring you as many features as possible in a small package.
 
-In +-180 LOC, you get:
+In one file, you get:
 1. Routing (using [nikic/FastRoute](https://github.com/nikic/FastRoute))
 2. Dependency injection (using [php-di/php-di](https://github.com/PHP-DI/PHP-DI))
 3. Middlewares (using [relay/relay](https://github.com/relayphp/Relay.Relay))
 4. Templating (using [twigphp/wig](https://github.com/twigphp/Twig))
+5. Request -> object mapping (using [cuyz/valinor](https://github.com/CuyZ/Valinor))
 
 Mono is intended as a proof-of-concept for small, modern PHP apps. Its goal is to show how far you can go by combining battle-tested libraries & PSR implementations.
 
@@ -176,13 +177,72 @@ $mono->addRoute('GET', '/example', function() use ($mono) {
 
 $mono->run();
 ````
+## 5. Request -> object mapping with `#[MapTo]` attribute
+A fan-favourite feature from [Symfony 6.3](https://symfony.com/blog/new-in-symfony-6-3-mapping-request-data-to-typed-objects). So good, we just had to implement it.
 
-## Debug mode
+Add the `#[MapTo]` attribute to a parameter in your route handler and the request body will be mapped to an instance of the class you specify.
+```php
+<?php
+
+class BookDataTransferObject
+{
+    public function __construct(
+        public string $title,
+        public ?int $rating,
+    ) {
+    }
+}
+
+$_POST['title'] = 'Moby dick';
+$_POST['rating'] = 10;
+
+$mono = new Mono();
+
+$mono->addRoute('POST', '/book', function (
+    ServerRequestInterface $request,
+    #[MapTo] BookDataTransferObject $bookDataTransferObject
+) use ($mono) {
+    /*
+     * $bookDataTransferObject now holds
+     * all the data from the request body,
+     * mapped to the properties of the class.
+     */
+});
+
+$mono->run();
+```
+The mapping of the request body to the object is done by the `cuyz/valinor` package.
+
+An implementation of their `Treemapper` interface is pulled from the container and used to perform the mapping.
+
+If you want to override the default mapping behaviour, define a custom `Treemapper` implementation and set it in the container you pass to the `Mono` constructor.
+
+Example of a custom mapper config:
+```php
+$customMapper = (new MapperBuilder())
+    ->supportDateFormats('Y-m-d H:i:s', 'Y-m-d')
+    ->enableFlexibleCasting()
+    ->allowPermissiveTypes()
+    ->mapper();
+    
+$containerBuilder = new ContainerBuilder();
+$containerBuilder->useAutowiring(true);
+$containerBuilder->addDefinitions([
+    TreeMapper::class => $customMapper
+]);
+
+$mono = new Mono(
+    container: $containerBuilder->build()
+);
+```
+## Other
+
+### Debug mode
 Mono has a debug mode that will catch all errors by default and show a generic 500 response.
 
 When developing, you can disable this mode by passing `false` as the second argument to the Mono constructor. This will show the actual error messages and allow you to use `dump` inside your Twig templates.
 
-## Folder structure & project setup
+### Folder structure & project setup
 
 Getting started with a new project is fast. Follow these steps:
 
