@@ -2,6 +2,9 @@
 
 namespace Mono\Test;
 
+use CuyZ\Valinor\Mapper\TreeMapper;
+use CuyZ\Valinor\MapperBuilder;
+use DI\ContainerBuilder;
 use Mono\MapTo;
 use Mono\Mono;
 use PHPUnit\Framework\TestCase;
@@ -253,5 +256,33 @@ class MainTest extends TestCase
         $output = $this->catchOutput(fn() => $mono->run());
 
         $this->assertEquals('Hello, world!', $output);
+    }
+
+    public function testCustomContainer(): void
+    {
+        $someClass = new BookDataTransferObject(
+            'Testing with Sander',
+            Gender::MALE,
+            new \DateTimeImmutable(),
+            1
+        );
+
+        $containerBuilder = new ContainerBuilder();
+        $containerBuilder->useAutowiring(true);
+        $containerBuilder->addDefinitions([
+            BookDataTransferObject::class => $someClass
+        ]);
+
+        $mono = new Mono(
+            templateFolder: __DIR__ . '/../templates',
+            debug: true,
+            container: $containerBuilder->build()
+        );
+
+        $theSameClass = $mono->get(BookDataTransferObject::class);
+        $this->assertInstanceOf(BookDataTransferObject::class, $theSameClass);
+        $this->assertEquals('Testing with Sander', $theSameClass->title);
+        $this->assertEquals(Gender::MALE, $theSameClass->gender);
+        $this->assertEquals(1, $theSameClass->rating);
     }
 }
