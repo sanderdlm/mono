@@ -192,7 +192,11 @@ final class Mono
             assert(is_array($parameters), 'Invalid request parameters.');
             assert(is_array($body), 'Invalid request body.');
 
-            // We create a Reflection instance of the request handler (either a closure or an invokable class)
+            /*
+             * We need a Reflection instance of the request handler,
+             * either a closure or an invokable class,
+             * to check for a MapTo attribute.
+             */
             if ($requestHandler instanceof \Closure) {
                 $reflector = new \ReflectionFunction($requestHandler);
             } elseif (is_object($requestHandler)) {
@@ -202,28 +206,34 @@ final class Mono
                 throw new \RuntimeException('Invalid request handler passed. Must be a closure or an invokable class.');
             }
 
-            // Loops over the handler's parameters to check for MapTo attributes
+            // Loops over the handler's parameters to check for attributes
             foreach ($reflector->getParameters() as $parameter) {
+                $name = $parameter->getName();
                 $attributes = $parameter->getAttributes();
 
-                if (count($attributes) > 0) {
-                    foreach ($attributes as $attribute) {
-                        if ($attribute->getName() === MapTo::class) {
-                            if (!$parameter->getType() instanceof ReflectionNamedType) {
-                                throw new \RuntimeException(sprintf(
-                                    'Missing class/type on parameter with MapTo attribute: %s',
-                                    $parameter->getName()
-                                ));
-                            }
+                // If there are no attributes, just skip
+                if (count($attributes) === 0) {
+                    continue;
+                }
 
-                            $dto = $parameter->getType()->getName();
-
-                            $parameters[$parameter->getName()] = $this->get(TreeMapper::class)
-                                ->map($dto, Source::array($body));
-
-                            break;
-                        }
+                foreach ($attributes as $attribute) {
+                    // If we encounter a different attribute, skip
+                    if ($attribute->getName() !== MapTo::class) {
+                        continue;
                     }
+
+                    if (!$parameter->getType() instanceof ReflectionNamedType) {
+                        throw new \RuntimeException(sprintf(
+                            'Missing class/type on parameter with MapTo attribute: %s',
+                            $name
+                        ));
+                    }
+
+                    $class = $parameter->getType()->getName();
+                    $parameters[$name] = $this->get(TreeMapper::class)->map($class, Source::array($body));
+
+                    // We only map to a single object, no need to go further
+                    break;
                 }
             }
 
