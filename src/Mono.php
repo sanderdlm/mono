@@ -192,6 +192,7 @@ final class Mono
             assert(is_array($parameters), 'Invalid request parameters.');
             assert(is_array($body), 'Invalid request body.');
 
+            // We create a Reflection instance of the request handler (either a closure or an invokable class)
             if ($requestHandler instanceof \Closure) {
                 $reflector = new \ReflectionFunction($requestHandler);
             } elseif (is_object($requestHandler)) {
@@ -201,6 +202,7 @@ final class Mono
                 throw new \RuntimeException('Invalid request handler passed. Must be a closure or an invokable class.');
             }
 
+            // Loops over the handler's parameters to check for MapTo attributes
             foreach ($reflector->getParameters() as $parameter) {
                 $attributes = $parameter->getAttributes();
 
@@ -216,7 +218,7 @@ final class Mono
 
                             $dto = $parameter->getType()->getName();
 
-                            $parameters[$parameter->getName()] = $this->container->get(TreeMapper::class)
+                            $parameters[$parameter->getName()] = $this->get(TreeMapper::class)
                                 ->map($dto, Source::array($body));
 
                             break;

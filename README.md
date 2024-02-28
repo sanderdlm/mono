@@ -177,12 +177,14 @@ $mono->addRoute('GET', '/example', function() use ($mono) {
 $mono->run();
 ````
 
-## Debug mode
+## Other
+
+### Debug mode
 Mono has a debug mode that will catch all errors by default and show a generic 500 response.
 
 When developing, you can disable this mode by passing `false` as the second argument to the Mono constructor. This will show the actual error messages and allow you to use `dump` inside your Twig templates.
 
-## Folder structure & project setup
+### Folder structure & project setup
 
 Getting started with a new project is fast. Follow these steps:
 
@@ -239,3 +241,60 @@ If you're planning to keep things simple, you can work straight in your index.ph
 },
 ```
 You can now access all of your classes in the `src` folder from your DI container (and autowire them!).
+
+### `#[MapTo]` attribute
+A fan-favourite feature from Symfony 6.3. So good, we just had to implement it.
+```php
+<?php
+
+class BookDataTransferObject
+{
+    public function __construct(
+        public string $title,
+        public ?int $rating,
+    ) {
+    }
+}
+
+$_POST['title'] = 'Moby dick';
+$_POST['rating'] = 10;
+
+$mono = new Mono();
+
+$mono->addRoute('POST', '/book', function (
+    ServerRequestInterface $request,
+    #[MapTo] BookDataTransferObject $bookDataTransferObject
+) use ($mono) {
+    /*
+     * $bookDataTransferObject now holds
+     * all the data from the request body,
+     * mapped to the properties of the class.
+     */
+});
+
+$mono->run();
+```
+The mapping of the request body to the object is done by the `cuyz/valinor` package.
+
+An implementation of their `Treemapper` interface is pulled from the container and used to perform the mapping.
+
+If you want to override the default mapping behaviour, define a custom `Treemapper` implementation and set it in the container you pass to the `Mono` constructor.
+
+Example of a custom mapper config:
+```php
+$customMapper = (new MapperBuilder())
+    ->supportDateFormats('Y-m-d H:i:s', 'Y-m-d')
+    ->enableFlexibleCasting()
+    ->allowPermissiveTypes()
+    ->mapper();
+    
+$containerBuilder = new ContainerBuilder();
+$containerBuilder->useAutowiring(true);
+$containerBuilder->addDefinitions([
+    TreeMapper::class => $customMapper
+]);
+
+$mono = new Mono(
+    container: $containerBuilder->build()
+);
+```
