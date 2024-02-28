@@ -126,10 +126,11 @@ final class Mono
     {
         /*
          * Mono is built as a middleware stack framework.
-         * Out of the box, we ship 3 middlewares:
+         * Out of the box, we ship 4 middlewares:
          *      1. Error handling
          *      2. Routing
-         *      3. Request handling
+         *      3. Attribute mapping (for our MapTo attribute)
+         *      4. Request handling
          */
 
         /*
@@ -180,15 +181,11 @@ final class Mono
             return $next($request);
         };
 
-        /*
-         * Middleware to execute the handler and return a response.
-         */
-        $requestHandlerMiddleware = function (ServerRequest $request, callable $next): ResponseInterface {
+        $attributeMappingMiddleware = function (ServerRequest $request, callable $next): ResponseInterface {
             $requestHandler = $request->getAttribute('request-handler');
             $parameters = $request->getAttribute('request-parameters');
             $body = $request->getParsedBody();
 
-            assert(is_callable($requestHandler), 'Invalid request handler.');
             assert(is_array($parameters), 'Invalid request parameters.');
             assert(is_array($body), 'Invalid request body.');
 
@@ -237,6 +234,21 @@ final class Mono
                 }
             }
 
+            $request = $request->withAttribute('request-parameters', $parameters);
+
+            return $next($request);
+        };
+
+        /*
+         * Middleware to execute the handler and return a response.
+         */
+        $requestHandlerMiddleware = function (ServerRequest $request, callable $next): ResponseInterface {
+            $requestHandler = $request->getAttribute('request-handler');
+            $parameters = $request->getAttribute('request-parameters');
+
+            assert(is_callable($requestHandler), 'Invalid request handler.');
+            assert(is_array($parameters), 'Invalid request parameters.');
+
             // Execute the handler and get the response back
             $response = call_user_func_array($requestHandler, [$request, ...$parameters]);
 
@@ -256,6 +268,7 @@ final class Mono
         $this->middleware = [
             $errorHandlingMiddleware,
             $routingMiddleware,
+            $attributeMappingMiddleware,
             ...$this->middleware,
             $requestHandlerMiddleware
         ];
