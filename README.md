@@ -299,3 +299,46 @@ If you're planning to keep things simple, you can work straight in your index.ph
 },
 ```
 You can now access all of your classes in the `src` folder from your DI container (and autowire them!).
+
+### Extra packages
+
+The following packages work really well with Mono. Most of them are quickly installed through Composer and then configured by adding a definition to the container.
+
+- [vlucas/phpdotenv](https://github.com/vlucas/phpdotenv) for environment variables
+```php
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
+$dotenv->load();
+```
+- [symfony/validator](https://symfony.com/doc/current/components/validator.html) for validation of the request DTOs
+```php
+$containerBuilder = new \DI\ContainerBuilder();
+$containerBuilder->useAutowiring(true);
+$containerBuilder->addDefinitions([
+    ValidatorInterface::class => Validation::createValidatorBuilder()
+        ->enableAttributeMapping()
+        ->getValidator(),
+]);
+
+$mono = new Mono(
+    container: $containerBuilder->build()
+);
+```
+- [brefphp/bref](https://github.com/brefphp/bref) for deploying to AWS Lambda
+- [symfony/translation](https://symfony.com/doc/current/components/validator.html) for implementing i18n ([symfony/twig-bridge](https://github.com/symfony/twig-bridge) also recommended)
+```php
+$translator = new Translator('en');
+$translator->addLoader('array', new ArrayLoader());
+$translator->addResource('array', [
+    'hello_world' => 'Hello world!',
+], 'en');
+
+$containerBuilder = new \DI\ContainerBuilder();
+$containerBuilder->useAutowiring(true);
+$containerBuilder->addDefinitions([
+    TranslatorInterface::class => $translator,
+]);
+
+$mono = new Mono(
+container: $containerBuilder->build()
+);
+```

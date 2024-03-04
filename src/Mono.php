@@ -22,6 +22,8 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use ReflectionNamedType;
 use Relay\Relay;
+use Symfony\Bridge\Twig\Extension\TranslationExtension;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Twig\Environment;
 use Twig\Extension\DebugExtension;
 use Twig\Loader\FilesystemLoader;
@@ -56,6 +58,11 @@ final class Mono
             $this->twig = new Environment($loader, ['debug' => $this->debug]);
             if ($this->debug) {
                 $this->twig->addExtension(new DebugExtension());
+            }
+
+            // If a translator is present in the container, pass it along to Twig
+            if ($this->container->has(TranslatorInterface::class)) {
+                $this->twig->addExtension(new TranslationExtension($this->get(TranslatorInterface::class)));
             }
 
             // Pass the Mono object to the container.
