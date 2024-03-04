@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Mono;
 
 use Attribute;
+use CuyZ\Valinor\Mapper\MappingError;
 use CuyZ\Valinor\Mapper\Source\Source;
+use CuyZ\Valinor\Mapper\Tree\Message\Messages;
 use CuyZ\Valinor\Mapper\TreeMapper;
 use CuyZ\Valinor\MapperBuilder;
 use DI\Container;
@@ -63,6 +65,7 @@ final class Mono
 
         if (!$this->container->has(TreeMapper::class)) {
             $mapper = (new MapperBuilder())
+                ->allowSuperfluousKeys()
                 ->enableFlexibleCasting()
                 ->mapper();
 
@@ -227,7 +230,22 @@ final class Mono
                     }
 
                     $class = $parameter->getType()->getName();
-                    $parameters[$name] = $this->get(TreeMapper::class)->map($class, Source::array($body));
+
+                    try {
+                        $parameters[$name] = $this->get(TreeMapper::class)->map($class, Source::array($body));
+                    } catch (MappingError $exception) {
+                        $messages = Messages::flattenFromNode(
+                            $exception->node()
+                        );
+
+                        $errorMessages = $messages->errors();
+
+                        throw new \RuntimeException(sprintf(
+                            'Mapping errors on %s: %s',
+                            $class,
+                            implode(',', $errorMessages->toArray())
+                        ));
+                    }
 
                     // We only map to a single object, no need to go further
                     break;
