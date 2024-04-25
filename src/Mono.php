@@ -110,7 +110,7 @@ final class Mono
     /**
      * @param array<string, mixed> $data
      */
-    public function render(string $template, array $data = []): ResponseInterface
+    public function render(string $template, array $data = []): string
     {
         if (!$this->twig instanceof Environment) {
             throw new \RuntimeException('Twig is not configured. Please provide a template folder in the constructor.');
@@ -118,10 +118,10 @@ final class Mono
 
         $template = $this->twig->load($template);
 
-        return $this->createResponse(200, $template->render($data));
+        return $template->render($data);
     }
 
-    public function createResponse(int $status, ?string $body = null): ResponseInterface
+    public function response(int $status, ?string $body = null): ResponseInterface
     {
         $response = (new ResponseFactory())->createResponse($status);
 
