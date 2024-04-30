@@ -19,7 +19,7 @@ Mono is intended as a proof-of-concept for small, modern PHP apps. Its goal is t
 $mono = new Mono();
 
 $mono->addRoute('GET', '/hello/{name}', function(ServerRequestInterface $request, string $name) use ($mono) {
-    return $mono->createResponse(200, 'Hello, ' . $name . '!');
+    return $mono->response(200, 'Hello, ' . $name . '!');
 });
 
 $mono->run();
@@ -48,7 +48,7 @@ When `$mono->run()` is called, the current request is matched against the routes
 $mono = new Mono();
 
 $mono->addRoute('GET', '/books/{book}', function(ServerRequestInterface $request, string $book) use ($mono) {
-    return $mono->createResponse(200, 'Book: ' . $book);
+    return $mono->response(200, 'Book: ' . $book);
 });
 
 $mono->run();
@@ -67,7 +67,7 @@ class BookController
 
     public function __invoke(ServerRequestInterface $request, string $book): ResponseInterface
     {
-        return $this->mono->createResponse(200, 'Book: ' . $book');
+        return $this->mono->response(200, 'Book: ' . $book');
     }
 }
 ```
@@ -95,7 +95,7 @@ $mono = new Mono();
 $mono->addRoute('GET', '/example', function() use ($mono) {
     $result = $mono->get(SomeDependency::class)->doSomething();
     
-    return $mono->createResponse(200, json_encode($result));
+    return $mono->response(200, json_encode($result));
 });
 
 $mono->run();
@@ -117,7 +117,7 @@ $mono = new Mono(container: $container);
 $mono->addRoute('GET', '/example', function() use ($mono) {
     $result = $mono->get(SomeDependency::class)->doSomething();
     
-    return $mono->createResponse(200, json_encode($result));
+    return $mono->response(200, json_encode($result));
 });
 
 $mono->run();
@@ -141,7 +141,7 @@ $mono = new Mono();
 $mono->addMiddleware(function (ServerRequestInterface $request, callable $next) use ($mono) {
     // Do something before the request is handled
     if ($request->getUri()->getPath() === '/example') {
-        return $mono->createResponse(403, 'Forbidden');
+        return $mono->response(403, 'Forbidden');
     }
     
     return $next($request);
@@ -170,9 +170,9 @@ $mono = new Mono(__DIR__ . '/templates');
 $mono->addRoute('GET', '/example', function() use ($mono) {
     $result = $mono->get(SomeDependency::class)->doSomething();
     
-    return $mono->render('example.twig', [
+    return $mono->response(200, $mono->render('example.twig', [
         'result' => $result
-    ]);
+    ]));
 });
 
 $mono->run();
@@ -267,9 +267,9 @@ require_once __DIR__ . '/../vendor/autoload.php';
 $mono = new Mono(__DIR__.'/../templates');
 
 $mono->addRoute('GET', '/', function() use ($mono) {
-    return $mono->render('home.twig', [
+    return $mono->response(200, $mono->render('home.twig', [
         'message' => 'Hello world!',
-    ]);
+    ]));
 });
 
 $mono->run();
