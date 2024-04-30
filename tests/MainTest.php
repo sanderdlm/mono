@@ -34,7 +34,7 @@ class MainTest extends TestCase
         $mono = new Mono(__DIR__ . '/templates');
 
         $mono->addRoute('GET', '/', function () use ($mono) {
-            return $mono->createResponse(200, 'Hello, world!');
+            return $mono->response(200, 'Hello, world!');
         });
 
         $output = $this->catchOutput(fn() => $mono->run());
@@ -50,7 +50,7 @@ class MainTest extends TestCase
         $mono = new Mono(__DIR__ . '/templates');
 
         $mono->addRoute('GET', '/books/{book}', function (RequestInterface $request, string $book) use ($mono) {
-            return $mono->createResponse(200, 'Book: ' . $book);
+            return $mono->response(200, 'Book: ' . $book);
         });
 
         $output = $this->catchOutput(fn() => $mono->run());
@@ -66,9 +66,9 @@ class MainTest extends TestCase
         $mono = new Mono(__DIR__ . '/templates');
 
         $mono->addRoute('GET', '/', function () use ($mono) {
-            return $mono->render('index.html.twig', [
+            return $mono->response(200, $mono->render('index.html.twig', [
                 'output' => 'Hello, world!',
-            ]);
+            ]));
         });
 
         $output = $this->catchOutput(fn() => $mono->run());
@@ -88,7 +88,7 @@ class MainTest extends TestCase
 
             $this->assertInstanceOf(Mono::class, $demoClass);
 
-            return $mono->createResponse(200, '');
+            return $mono->response(200, '');
         });
 
         $mono->run();
@@ -134,9 +134,9 @@ class MainTest extends TestCase
         $mono = new Mono(debug: true);
 
         $mono->addRoute('GET', '/', function () use ($mono) {
-            return $mono->render('index.html.twig', [
+            return $mono->response(200, $mono->render('index.html.twig', [
                 'output' => 'Hello, world!',
-            ]);
+            ]));
         });
 
         $this->expectException(\RuntimeException::class);
@@ -196,11 +196,11 @@ class MainTest extends TestCase
         $mono->addMiddleware(function (ServerRequestInterface $request, callable $next) use ($mono) {
             $response = $next($request);
 
-            return $mono->createResponse(200, 'Some new content');
+            return $mono->response(200, 'Some new content');
         });
 
         $mono->addRoute('GET', '/', function (ServerRequestInterface $request) use ($mono) {
-            return $mono->createResponse(200, 'Hello, world!');
+            return $mono->response(200, 'Hello, world!');
         });
 
         $output = $this->catchOutput(fn() => $mono->run());
@@ -224,7 +224,7 @@ class MainTest extends TestCase
         });
 
         $mono->addRoute('GET', '/', function (ServerRequestInterface $request) use ($mono) {
-            return $mono->createResponse(200, 'Hello, world!');
+            return $mono->response(200, 'Hello, world!');
         });
 
         $output = $this->catchOutput(fn() => $mono->run());
@@ -250,7 +250,7 @@ class MainTest extends TestCase
             $this->assertEquals(Gender::MALE, $bookDataTransferObject->gender);
             $this->assertEquals(new \DateTimeImmutable('2014/05/12'), $bookDataTransferObject->published);
 
-            return $mono->createResponse(200, 'Hello, world!');
+            return $mono->response(200, 'Hello, world!');
         });
 
         $output = $this->catchOutput(fn() => $mono->run());

@@ -15,8 +15,8 @@ class TwigController
 
     public function __invoke(RequestInterface $request, string $name): ResponseInterface
     {
-        return $this->mono->render('index.html.twig', [
+        return $this->mono->response(200, $this->mono->render('index.html.twig', [
             'output' => 'Hello autotwig!',
-        ]);
+        ]));
     }
 }

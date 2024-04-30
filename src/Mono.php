@@ -154,7 +154,7 @@ final class Mono
                     throw $e;
                 }
 
-                return $this->createResponse(500, 'Something went wrong!');
+                return $this->response(500, 'Something went wrong!');
             }
         };
 
@@ -177,11 +177,11 @@ final class Mono
             $route = $dispatcher->dispatch($request->getMethod(), $request->getUri()->getPath());
 
             if ($route[0] === FastRoute\Dispatcher::NOT_FOUND) {
-                return $this->createResponse(404);
+                return $this->response(404);
             }
 
             if ($route[0] === FastRoute\Dispatcher::METHOD_NOT_ALLOWED) {
-                return $this->createResponse(405)->withHeader('Allow', implode(', ', $route[1]));
+                return $this->response(405)->withHeader('Allow', implode(', ', $route[1]));
             }
 
             $request = $request

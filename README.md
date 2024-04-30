@@ -311,9 +311,11 @@ $dotenv->load();
 ```
 - [symfony/validator](https://symfony.com/doc/current/components/validator.html) for validation of the request DTOs
 ```php
+// Custom container
 $containerBuilder = new \DI\ContainerBuilder();
 $containerBuilder->useAutowiring(true);
 $containerBuilder->addDefinitions([
+    // Build & pass a validator
     ValidatorInterface::class => Validation::createValidatorBuilder()
         ->enableAttributeMapping()
         ->getValidator(),
@@ -322,16 +324,32 @@ $containerBuilder->addDefinitions([
 $mono = new Mono(
     container: $containerBuilder->build()
 );
+
+// Generic sign-up route
+$mono->addRoute('POST', '/sign-up', function(
+    ServerRequestInterface $request,
+    // Map the request payload to our DTO
+    #[MapTo] PersonDataTransferObject $personDataTransferObject
+) use ($mono) {
+    // Validate the DTO
+    $errors = $mono->get(ValidatorInterface::class)->validate($personDataTransferObject);
+    
+    // Do something with the errors
+    if ($errors->count() > 0) {
+    }
+});
 ```
 - [brefphp/bref](https://github.com/brefphp/bref) for deploying to AWS Lambda
 - [symfony/translation](https://symfony.com/doc/current/components/validator.html) for implementing i18n ([symfony/twig-bridge](https://github.com/symfony/twig-bridge) also recommended)
 ```php
+// Create a new translator, with whatever config you like.
 $translator = new Translator('en');
 $translator->addLoader('array', new ArrayLoader());
 $translator->addResource('array', [
     'hello_world' => 'Hello world!',
 ], 'en');
 
+// Create a custom container & add your translator to it
 $containerBuilder = new \DI\ContainerBuilder();
 $containerBuilder->useAutowiring(true);
 $containerBuilder->addDefinitions([
@@ -339,6 +357,12 @@ $containerBuilder->addDefinitions([
 ]);
 
 $mono = new Mono(
-container: $containerBuilder->build()
+    container: $containerBuilder->build()
 );
+
+/*
+ * Use the |trans filter in your Twig templates,
+ * or get the TranslatorInterface from the container
+ * and use it directly in your route handlers.
+ */
 ```
