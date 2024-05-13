@@ -1,6 +1,6 @@
 {
     "name": "sanderdlm/mono",
-    "description": "Framework for tiny PHP applications",
+    "description": "tiny framework, big dreams",
     "type": "library",
     "license": "MIT",
     "require": {

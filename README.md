@@ -7,9 +7,9 @@ In one file, you get:
 2. Dependency injection (using [php-di/php-di](https://github.com/PHP-DI/PHP-DI))
 3. Middlewares (using [relay/relay](https://github.com/relayphp/Relay.Relay))
 4. Templating (using [twigphp/wig](https://github.com/twigphp/Twig))
+5. Data-to-object mapping (using [cuyz/valinor](https://github.com/CuyZ/Valinor))
 
 Mono is intended as a proof-of-concept for small, modern PHP apps. Its goal is to show how far you can go by combining battle-tested libraries & PSR implementations.
-
 
 #### Hello world
 ```php
@@ -27,8 +27,6 @@ $mono->run();
 People familiar with [Slim](https://github.com/slimphp/Slim) will definitely notice the similarities.
 
 If you're interested, please take a look at the [source code](https://github.com/sanderdlm/mono/blob/main/src/Mono.php). It's only a single file and has comments explaining everything going on.
-
-> If this exact boilerplate isn't exactly what you need, copy `Mono.php` into your own project, rename it, swap out dependencies, change configuration, etc... to reach your desired stack.
 
 ## 1. Routing
 You use `$mono->addRoute()` to add all your routes. Same method signature as the underlying FastRoute method. Route handlers are closures by default, since this is mainly intended as a framework for small apps, but you can use invokable controllers as well.
@@ -176,7 +174,7 @@ $mono->addRoute('GET', '/example', function() use ($mono) {
 
 $mono->run();
 ````
-## 5. Data -> object mapping with `cuyz/valinor`
+## 5. Data-to-object mapping
 Mono comes with `cuyz/valinor` out of the box. If you don't provide a custom `Mapper` instance to the container, a default `TreeMapper` instance will be used.
 
 This allows you to map data (for example, from the request POST body) to an object (for example, a DTO).
