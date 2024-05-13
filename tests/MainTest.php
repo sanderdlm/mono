@@ -244,8 +244,12 @@ class MainTest extends TestCase
 
         $mono->addRoute('POST', '/book', function (
             ServerRequestInterface $request,
-            #[MapTo] BookDataTransferObject $bookDataTransferObject
         ) use ($mono) {
+            $bookDataTransferObject = $mono->get(TreeMapper::class)->map(
+                BookDataTransferObject::class,
+                $request->getParsedBody()
+            );
+
             $this->assertEquals('Moby dick', $bookDataTransferObject->title);
             $this->assertEquals(Gender::MALE, $bookDataTransferObject->gender);
             $this->assertEquals(new \DateTimeImmutable('2014/05/12'), $bookDataTransferObject->published);

@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace Mono;
 
-use Attribute;
-use CuyZ\Valinor\Mapper\MappingError;
-use CuyZ\Valinor\Mapper\Source\Source;
-use CuyZ\Valinor\Mapper\Tree\Message\Messages;
 use CuyZ\Valinor\Mapper\TreeMapper;
 use CuyZ\Valinor\MapperBuilder;
 use DI\Container;
@@ -20,7 +16,6 @@ use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
-use ReflectionNamedType;
 use Relay\Relay;
 use Symfony\Bridge\Twig\Extension\TranslationExtension;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -56,6 +51,7 @@ final class Mono
         if ($templateFolder !== null && file_exists($templateFolder)) {
             $loader = new FilesystemLoader($templateFolder);
             $this->twig = new Environment($loader, ['debug' => $this->debug]);
+
             if ($this->debug) {
                 $this->twig->addExtension(new DebugExtension());
             }
@@ -136,11 +132,10 @@ final class Mono
     {
         /*
          * Mono is built as a middleware stack framework.
-         * Out of the box, we ship 4 middlewares:
+         * Out of the box, we ship 3 middlewares:
          *      1. Error handling
          *      2. Routing
-         *      3. Attribute mapping (for our MapTo attribute)
-         *      4. Request handling
+         *      3. Request handling
          */
 
         /*
@@ -191,79 +186,6 @@ final class Mono
             return $next($request);
         };
 
-        $attributeMappingMiddleware = function (ServerRequest $request, callable $next): ResponseInterface {
-            $requestHandler = $request->getAttribute('request-handler');
-            $parameters = $request->getAttribute('request-parameters');
-            $body = $request->getParsedBody();
-
-            assert(is_array($parameters), 'Invalid request parameters.');
-            assert(is_array($body), 'Invalid request body.');
-
-            /*
-             * We need a Reflection instance of the request handler,
-             * either a closure or an invokable class,
-             * to check for a MapTo attribute.
-             */
-            if ($requestHandler instanceof \Closure) {
-                $reflector = new \ReflectionFunction($requestHandler);
-            } elseif (is_object($requestHandler)) {
-                $reflectedClass = new \ReflectionClass($requestHandler);
-                $reflector = $reflectedClass->getMethod('__invoke');
-            } else {
-                throw new \RuntimeException('Invalid request handler passed. Must be a closure or an invokable class.');
-            }
-
-            // Loops over the handler's parameters to check for attributes
-            foreach ($reflector->getParameters() as $parameter) {
-                $name = $parameter->getName();
-                $attributes = $parameter->getAttributes();
-
-                // If there are no attributes, just skip
-                if (count($attributes) === 0) {
-                    continue;
-                }
-
-                foreach ($attributes as $attribute) {
-                    // If we encounter a different attribute, skip
-                    if ($attribute->getName() !== MapTo::class) {
-                        continue;
-                    }
-
-                    if (!$parameter->getType() instanceof ReflectionNamedType) {
-                        throw new \RuntimeException(sprintf(
-                            'Missing class/type on parameter with MapTo attribute: %s',
-                            $name
-                        ));
-                    }
-
-                    $class = $parameter->getType()->getName();
-
-                    try {
-                        $parameters[$name] = $this->get(TreeMapper::class)->map($class, Source::array($body));
-                    } catch (MappingError $exception) {
-                        $messages = Messages::flattenFromNode(
-                            $exception->node()
-                        );
-
-                        $errorMessages = $messages->errors();
-
-                        throw new \RuntimeException(sprintf(
-                            'Mapping errors on %s: %s',
-                            $class,
-                            implode(',', $errorMessages->toArray())
-                        ));
-                    }
-
-                    // We only map to a single object, no need to go further
-                    break;
-                }
-            }
-
-            $request = $request->withAttribute('request-parameters', $parameters);
-
-            return $next($request);
-        };
-
         /*
          * Middleware to execute the handler and return a response.
          */
@@ -293,7 +215,6 @@ final class Mono
         $this->middleware = [
             $errorHandlingMiddleware,
             $routingMiddleware,
-            $attributeMappingMiddleware,
             ...$this->middleware,
             $requestHandlerMiddleware
         ];
@@ -305,10 +226,4 @@ final class Mono
         // 💨
         (new SapiEmitter())->emit($response);
     }
-}
-
-// phpcs:disable
-#[Attribute]
-class MapTo
-{
 }

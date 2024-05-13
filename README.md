@@ -7,7 +7,6 @@ In one file, you get:
 2. Dependency injection (using [php-di/php-di](https://github.com/PHP-DI/PHP-DI))
 3. Middlewares (using [relay/relay](https://github.com/relayphp/Relay.Relay))
 4. Templating (using [twigphp/wig](https://github.com/twigphp/Twig))
-5. Request -> object mapping (using [cuyz/valinor](https://github.com/CuyZ/Valinor))
 
 Mono is intended as a proof-of-concept for small, modern PHP apps. Its goal is to show how far you can go by combining battle-tested libraries & PSR implementations.
 
@@ -177,10 +176,12 @@ $mono->addRoute('GET', '/example', function() use ($mono) {
 
 $mono->run();
 ````
-## 5. Request -> object mapping with `#[MapTo]` attribute
-A fan-favourite feature from [Symfony 6.3](https://symfony.com/blog/new-in-symfony-6-3-mapping-request-data-to-typed-objects). So good, we just had to implement it.
+## 5. Data -> object mapping with `cuyz/valinor`
+Mono comes with `cuyz/valinor` out of the box. If you don't provide a custom `Mapper` instance to the container, a default `TreeMapper` instance will be used.
 
-Add the `#[MapTo]` attribute to a parameter in your route handler and the request body will be mapped to an instance of the class you specify.
+This allows you to map data (for example, from the request POST body) to an object (for example, a DTO).
+
+Example below:
 ```php
 <?php
 
@@ -199,22 +200,21 @@ $_POST['rating'] = 10;
 $mono = new Mono();
 
 $mono->addRoute('POST', '/book', function (
-    ServerRequestInterface $request,
-    #[MapTo] BookDataTransferObject $bookDataTransferObject
+    ServerRequestInterface $request
 ) use ($mono) {
     /*
      * $bookDataTransferObject now holds
      * all the data from the request body,
      * mapped to the properties of the class.
      */
+     $bookDataTransferObject = $mono->get(TreeMapper::class)->map(
+        BookDataTransferObject::class,
+        $request->getParsedBody()
+    );
 });
 
 $mono->run();
 ```
-The mapping of the request body to the object is done by the `cuyz/valinor` package.
-
-An implementation of their `Treemapper` interface is pulled from the container and used to perform the mapping.
-
 If you want to override the default mapping behaviour, define a custom `Treemapper` implementation and set it in the container you pass to the `Mono` constructor.
 
 Example of a custom mapper config:
@@ -327,10 +327,14 @@ $mono = new Mono(
 
 // Generic sign-up route
 $mono->addRoute('POST', '/sign-up', function(
-    ServerRequestInterface $request,
-    // Map the request payload to our DTO
-    #[MapTo] PersonDataTransferObject $personDataTransferObject
+    ServerRequestInterface $request
 ) use ($mono) {
+    // Build the DTO
+    $personDataTransferObject = $mono->get(TreeMapper::class)->map(
+        PersonDataTransferObject::class,
+        $request->getParsedBody()
+    );
+
     // Validate the DTO
     $errors = $mono->get(ValidatorInterface::class)->validate($personDataTransferObject);
     
