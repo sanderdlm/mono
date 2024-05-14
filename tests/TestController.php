@@ -2,6 +2,7 @@
 
 namespace Mono\Test;
 
+use Laminas\Diactoros\Response\TextResponse;
 use Mono\Mono;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -19,6 +20,6 @@ class TestController
             throw new \RuntimeException('Autowiring broken in test controller.');
         }
 
-        return $this->mono->response(200, 'Hello ' . $name . '!');
+        return new TextResponse('Hello ' . $name . '!');
     }
 }

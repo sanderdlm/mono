@@ -4,6 +4,8 @@ namespace Mono\Test;
 
 use CuyZ\Valinor\Mapper\TreeMapper;
 use DI\ContainerBuilder;
+use Laminas\Diactoros\Response\HtmlResponse;
+use Laminas\Diactoros\Response\TextResponse;
 use Mono\Mono;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
@@ -40,8 +42,8 @@ class MainTest extends TestCase
 
         $mono = new Mono(__DIR__ . '/templates');
 
-        $mono->addRoute('GET', '/', function () use ($mono) {
-            return $mono->response(200, 'Hello, world!');
+        $mono->addRoute('GET', '/', function () {
+            return new TextResponse('Hello, world!');
         });
 
         $output = $this->catchOutput(fn() => $mono->run());
@@ -56,8 +58,8 @@ class MainTest extends TestCase
 
         $mono = new Mono(__DIR__ . '/templates');
 
-        $mono->addRoute('GET', '/books/{book}', function (RequestInterface $request, string $book) use ($mono) {
-            return $mono->response(200, 'Book: ' . $book);
+        $mono->addRoute('GET', '/books/{book}', function (RequestInterface $request, string $book) {
+            return new TextResponse('Book: ' . $book);
         });
 
         $output = $this->catchOutput(fn() => $mono->run());
@@ -70,10 +72,10 @@ class MainTest extends TestCase
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['REQUEST_URI'] = '/';
 
-        $mono = new Mono(__DIR__ . '/templates');
+        $mono = new Mono(__DIR__ . '/templates', true);
 
         $mono->addRoute('GET', '/', function () use ($mono) {
-            return $mono->response(200, $mono->render('index.html.twig', [
+            return new HtmlResponse($mono->render('index.html.twig', [
                 'output' => 'Hello, world!',
             ]));
         });
@@ -95,7 +97,7 @@ class MainTest extends TestCase
 
             $this->assertInstanceOf(Mono::class, $demoClass);
 
-            return $mono->response(200, '');
+            return new TextResponse('');
         });
 
         $mono->run();
@@ -141,7 +143,7 @@ class MainTest extends TestCase
         $mono = new Mono(debug: true);
 
         $mono->addRoute('GET', '/', function () use ($mono) {
-            return $mono->response(200, $mono->render('index.html.twig', [
+            return new HtmlResponse($mono->render('index.html.twig', [
                 'output' => 'Hello, world!',
             ]));
         });
@@ -200,14 +202,14 @@ class MainTest extends TestCase
 
         $mono = new Mono(__DIR__ . '/templates', true);
 
-        $mono->addMiddleware(function (ServerRequestInterface $request, callable $next) use ($mono) {
-            $response = $next($request);
+        $mono->addMiddleware(function (ServerRequestInterface $request, callable $next) {
+            $next($request);
 
-            return $mono->response(200, 'Some new content');
+            return new TextResponse('Some new content');
         });
 
-        $mono->addRoute('GET', '/', function (ServerRequestInterface $request) use ($mono) {
-            return $mono->response(200, 'Hello, world!');
+        $mono->addRoute('GET', '/', function () {
+            return new TextResponse('Hello, world!');
         });
 
         $output = $this->catchOutput(fn() => $mono->run());
@@ -230,8 +232,8 @@ class MainTest extends TestCase
             return $next($request);
         });
 
-        $mono->addRoute('GET', '/', function (ServerRequestInterface $request) use ($mono) {
-            return $mono->response(200, 'Hello, world!');
+        $mono->addRoute('GET', '/', function () {
+            return new TextResponse('Hello, world!');
         });
 
         $output = $this->catchOutput(fn() => $mono->run());
@@ -261,7 +263,7 @@ class MainTest extends TestCase
             $this->assertEquals(Gender::MALE, $bookDataTransferObject->gender);
             $this->assertEquals(new \DateTimeImmutable('2014/05/12'), $bookDataTransferObject->published);
 
-            return $mono->response(200, 'Hello, world!');
+            return new TextResponse('Hello, world!');
         });
 
         $output = $this->catchOutput(fn() => $mono->run());

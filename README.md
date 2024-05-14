@@ -1,32 +1,50 @@
 # Mono
 
-Mono is a tiny, single-class PHP framework that combines multiple great projects from the PHP ecosystem to bring you as many features as possible in a small package.
+Mono is a minimal, modern PHP framework in a single file.
 
-In one file, you get:
+It contains no custom implementations, but rather acts as a wrapper around the following great projects:
 1. Routing (using [nikic/FastRoute](https://github.com/nikic/FastRoute))
 2. Dependency injection (using [php-di/php-di](https://github.com/PHP-DI/PHP-DI))
 3. Middlewares (using [relay/relay](https://github.com/relayphp/Relay.Relay))
 4. Templating (using [twigphp/wig](https://github.com/twigphp/Twig))
 5. Data-to-object mapping (using [cuyz/valinor](https://github.com/CuyZ/Valinor))
 
-Mono is intended as a proof-of-concept for small, modern PHP apps. Its goal is to show how far you can go by combining battle-tested libraries & PSR implementations.
-
-#### Hello world
+This is the interface of the `Mono` class:
+```php
+interface MonoInterface
+{
+    // Render a Twig template
+    public function render(string $template, array $data): string;
+    
+    // Add a middleware to the PSR-15 stack
+    public function addMiddleware(MiddlewareInterface|callable $middleware): void;
+    
+    // Add a route to the FastRoute router
+    public function addRoute(string|array $method, string $path, callable $handler): void;
+        
+    // Run the app
+    public function run(): void;
+}
+```
+Using just these methods, we have all the tools to build our application:
 ```php
 <?php
 
-$mono = new Mono();
+$mono = new Mono(__DIR__ . '/templates');
 
-$mono->addRoute('GET', '/hello/{name}', function(ServerRequestInterface $request, string $name) use ($mono) {
-    return $mono->response(200, 'Hello, ' . $name . '!');
+$mono->addRoute('GET', '/example', function() {
+    $result = $mono->get(SomeDependency::class)->doSomething();
+    
+    return new HtmlResponse($mono->render('example.twig', [
+        'result' => $result
+    ]));
 });
 
 $mono->run();
-```
+````
+Mono is not intended as a full-fledged framework, but rather as a proof-of-concept for small PHP apps. The goal is to show how far you can go by combining well-known libraries & PSR implementations.
 
-People familiar with [Slim](https://github.com/slimphp/Slim) will definitely notice the similarities.
-
-If you're interested, please take a look at the [source code](https://github.com/sanderdlm/mono/blob/main/src/Mono.php). It's only a single file and has comments explaining everything going on.
+The [source code](https://github.com/sanderdlm/mono/blob/main/src/Mono.php) has comments and is easy to read.
 
 ## 1. Routing
 You use `$mono->addRoute()` to add all your routes. Same method signature as the underlying FastRoute method. Route handlers are closures by default, since this is mainly intended as a framework for small apps, but you can use invokable controllers as well.
@@ -44,8 +62,8 @@ When `$mono->run()` is called, the current request is matched against the routes
 
 $mono = new Mono();
 
-$mono->addRoute('GET', '/books/{book}', function(ServerRequestInterface $request, string $book) use ($mono) {
-    return $mono->response(200, 'Book: ' . $book);
+$mono->addRoute('GET', '/books/{book}', function(ServerRequestInterface $request, string $book) {
+    return new TextResponse(200, 'Book: ' . $book);
 });
 
 $mono->run();
@@ -64,7 +82,7 @@ class BookController
 
     public function __invoke(ServerRequestInterface $request, string $book): ResponseInterface
     {
-        return $this->mono->response(200, 'Book: ' . $book');
+        return new TextResponse('Book: ' . $book');
     }
 }
 ```
@@ -96,7 +114,7 @@ $mono = new Mono();
 $mono->addRoute('GET', '/example', function() use ($mono) {
     $result = $mono->get(SomeDependency::class)->doSomething();
     
-    return $mono->response(200, json_encode($result));
+    return new JsonResponse($result);
 });
 
 $mono->run();
@@ -118,7 +136,7 @@ $mono = new Mono(container: $container);
 $mono->addRoute('GET', '/example', function() use ($mono) {
     $result = $mono->get(SomeDependency::class)->doSomething();
     
-    return $mono->response(200, json_encode($result));
+    return new JsonResponse($result);
 });
 
 $mono->run();
@@ -139,10 +157,10 @@ You can add middleware to the stack with the `addMiddleware()` method. Middlewar
 
 $mono = new Mono();
 
-$mono->addMiddleware(function (ServerRequestInterface $request, callable $next) use ($mono) {
+$mono->addMiddleware(function (ServerRequestInterface $request, callable $next) {
     // Do something before the request is handled
     if ($request->getUri()->getPath() === '/example') {
-        return $mono->response(403, 'Forbidden');
+        return new TextResponse('Forbidden', 403);
     }
     
     return $next($request);
@@ -159,7 +177,7 @@ $mono->addMiddleware(function (ServerRequestInterface $request, callable $next) 
 You can find a bunch of great PSR-15 compatible middlewares already written in the [middlewares/psr15-middlewares](https://github.com/middlewares/psr15-middlewares) project. These can be plugged into Mono and used straight away.
 ## 4. Templating
 
-Mono comes with Twig out-of-the-box. If you want to use Twig, you have to pass the path to your templates folder in the Mono constructor.
+If you want to use Twig, you have to pass the path to your templates folder in the Mono constructor.
 
 Afterward, you can use the `render()` method on your Mono object to render a Twig template from that folder.
 
@@ -171,7 +189,7 @@ $mono = new Mono(__DIR__ . '/templates');
 $mono->addRoute('GET', '/example', function() use ($mono) {
     $result = $mono->get(SomeDependency::class)->doSomething();
     
-    return $mono->response(200, $mono->render('example.twig', [
+    return new HtmlResponse($mono->render('example.twig', [
         'result' => $result
     ]));
 });
@@ -179,11 +197,9 @@ $mono->addRoute('GET', '/example', function() use ($mono) {
 $mono->run();
 ````
 ## 5. Data-to-object mapping
-Mono comes with `cuyz/valinor` out of the box. If you don't provide a custom `Mapper` instance to the container, a default `TreeMapper` instance will be used.
 
-This allows you to map data (for example, from the request POST body) to an object (for example, a DTO).
+This allows you to map data (for example, from the request POST body) to an object (for example, a DTO):
 
-Example below:
 ```php
 <?php
 
@@ -222,7 +238,6 @@ If you want to override the default mapping behaviour, define a custom `Treemapp
 Example of a custom mapper config:
 ```php
 $customMapper = (new MapperBuilder())
-    ->supportDateFormats('Y-m-d H:i:s', 'Y-m-d')
     ->enableFlexibleCasting()
     ->allowPermissiveTypes()
     ->mapper();
@@ -268,8 +283,8 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 $mono = new Mono(__DIR__.'/../templates');
 
-$mono->addRoute('GET', '/', function() use ($mono) {
-    return $mono->response(200, $mono->render('home.twig', [
+$mono->addRoute('GET', '/', function() {
+    return new HtmlResponse($mono->render('home.twig', [
         'message' => 'Hello world!',
     ]));
 });

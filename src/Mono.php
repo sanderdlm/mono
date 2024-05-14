@@ -8,27 +8,22 @@ use CuyZ\Valinor\Mapper\TreeMapper;
 use CuyZ\Valinor\MapperBuilder;
 use DI\Container;
 use FastRoute;
-use Laminas\Diactoros\ResponseFactory;
+use Laminas\Diactoros\Response\TextResponse;
 use Laminas\Diactoros\ServerRequest;
 use Laminas\Diactoros\ServerRequestFactory;
-use Laminas\Diactoros\StreamFactory;
 use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
-use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Relay\Relay;
-use Symfony\Bridge\Twig\Extension\TranslationExtension;
-use Symfony\Contracts\Translation\TranslatorInterface;
 use Twig\Environment;
 use Twig\Extension\DebugExtension;
 use Twig\Loader\FilesystemLoader;
 
 final class Mono
 {
-    private ?Environment $twig = null;
     /**
-     * @var array <array{method: string|string[], path: string, handler: callable}>
+     * @var array <array{method: string|string[], path: string, handler: mixed}>
      */
     private array $routes = [];
     /**
@@ -42,26 +37,15 @@ final class Mono
         public readonly Container $container = new Container(),
         public readonly ?string $routeCacheFile = null
     ) {
-        // Initialize a PHP-DI container with default configuration
-        //$this->container = $container ?? new Container();
-
-        // If a template folder was passed, initialize Twig
         if ($this->templateFolder !== null && file_exists($this->templateFolder)) {
             $loader = new FilesystemLoader($this->templateFolder);
-            $this->twig = new Environment($loader, ['debug' => $this->debug]);
+            $twig = new Environment($loader, ['debug' => $this->debug]);
 
             if ($this->debug) {
-                $this->twig->addExtension(new DebugExtension());
+                $twig->addExtension(new DebugExtension());
             }
 
-            // If a translator is present in the container, pass it along to Twig
-            if ($this->container->has(TranslatorInterface::class)) {
-                $this->twig->addExtension(new TranslationExtension($this->get(TranslatorInterface::class)));
-            }
-
-            // Pass the Mono object to the container.
-            // This allows autowired controllers access to it.
-            $this->container->set(Mono::class, $this);
+            $this->container->set(Environment::class, $twig);
         }
 
         if (!$this->container->has(TreeMapper::class)) {
@@ -72,12 +56,14 @@ final class Mono
 
             $this->container->set(TreeMapper::class, $mapper);
         }
+
+        $this->container->set(Mono::class, $this);
     }
 
     /**
      * @param string|string[] $method
      */
-    public function addRoute(string|array $method, string $path, callable $handler): void
+    public function addRoute(string|array $method, string $path, mixed $handler): void
     {
         $this->routes[] = [
             'method' => $method,
@@ -106,24 +92,13 @@ final class Mono
      */
     public function render(string $template, array $data = []): string
     {
-        if (!$this->twig instanceof Environment) {
-            throw new \RuntimeException('Twig is not configured. Please provide a template folder in the constructor.');
+        try {
+            $twig = $this->get(Environment::class);
+        } catch (\Exception $e) {
+            throw new \RuntimeException('Twig is not configured. Pass a template folder or your own Twig instance.');
         }
 
-        $template = $this->twig->load($template);
-
-        return $template->render($data);
-    }
-
-    public function response(int $status, ?string $body = null): ResponseInterface
-    {
-        $response = (new ResponseFactory())->createResponse($status);
-
-        if ($body === null) {
-            return $response;
-        }
-
-        return $response->withBody((new StreamFactory())->createStream($body));
+        return $twig->load($template)->render($data);
     }
 
     public function run(): void
@@ -147,7 +122,7 @@ final class Mono
                     throw $e;
                 }
 
-                return $this->response(500, 'Something went wrong!');
+                return new TextResponse('Something went wrong!', 500);
             }
         };
 
@@ -181,11 +156,13 @@ final class Mono
             $route = $dispatcher->dispatch($request->getMethod(), $request->getUri()->getPath());
 
             if ($route[0] === FastRoute\Dispatcher::NOT_FOUND) {
-                return $this->response(404, 'Not found');
+                return new TextResponse('Not found', 404);
             }
 
             if ($route[0] === FastRoute\Dispatcher::METHOD_NOT_ALLOWED) {
-                return $this->response(405, 'Method not allowed')->withHeader('Allow', implode(', ', $route[1]));
+                return new TextResponse('Method not allowed', 405, [
+                    'Allow', implode(', ', $route[1])
+                ]);
             }
 
             $request = $request
