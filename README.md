@@ -78,6 +78,10 @@ $mono->addRoute('GET', '/books/{book}', $mono->get(BookController::class));
 
 $mono->run();
 ```
+Caching your routes in production is trivial. Pass a valid, writeable path for your cache file as a `routeCacheFile` parameter to your `Mono` object.
+```php
+$mono = new Mono(routeCacheFile: sys_get_temp_dir() . '/mono-route.cache');
+```
 ## 2. Dependency injection
 
 When a Mono object is created, it constructs a basic PHP-DI container with default configuration. This means that any loaded classes (for example through PSR-4) can be autowired or pulled from the container manually.

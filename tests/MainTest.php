@@ -3,9 +3,7 @@
 namespace Mono\Test;
 
 use CuyZ\Valinor\Mapper\TreeMapper;
-use CuyZ\Valinor\MapperBuilder;
 use DI\ContainerBuilder;
-use Mono\MapTo;
 use Mono\Mono;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
@@ -24,6 +22,15 @@ class MainTest extends TestCase
         ob_end_clean();
 
         return !$output ? '' : $output;
+    }
+
+    public function testWithoutRoutes(): void
+    {
+        $mono = new Mono();
+
+        $output = $this->catchOutput(fn() => $mono->run());
+
+        $this->assertEquals('Not found', $output);
     }
 
     public function testRouting(): void

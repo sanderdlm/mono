@@ -13,6 +13,7 @@ use Laminas\Diactoros\ServerRequest;
 use Laminas\Diactoros\ServerRequestFactory;
 use Laminas\Diactoros\StreamFactory;
 use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
+use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -25,7 +26,6 @@ use Twig\Loader\FilesystemLoader;
 
 final class Mono
 {
-    private Container $container;
     private ?Environment $twig = null;
     /**
      * @var array <array{method: string|string[], path: string, handler: callable}>
@@ -35,21 +35,19 @@ final class Mono
      * @var array <MiddlewareInterface|callable>
      */
     private array $middleware = [];
-    private bool $debug;
 
     public function __construct(
-        string $templateFolder = null,
-        bool $debug = false,
-        Container $container = null
+        public readonly ?string $templateFolder = null,
+        public readonly bool $debug = false,
+        public readonly Container $container = new Container(),
+        public readonly ?string $routeCacheFile = null
     ) {
-        // Set the debug mode on our Mono object
-        $this->debug = $debug;
         // Initialize a PHP-DI container with default configuration
-        $this->container = $container ?? new Container();
+        //$this->container = $container ?? new Container();
 
         // If a template folder was passed, initialize Twig
-        if ($templateFolder !== null && file_exists($templateFolder)) {
-            $loader = new FilesystemLoader($templateFolder);
+        if ($this->templateFolder !== null && file_exists($this->templateFolder)) {
+            $loader = new FilesystemLoader($this->templateFolder);
             $this->twig = new Environment($loader, ['debug' => $this->debug]);
 
             if ($this->debug) {
@@ -154,11 +152,22 @@ final class Mono
         };
 
         // Set up our FastRoute dispatcher
-        $dispatcher = FastRoute\simpleDispatcher(function (FastRoute\RouteCollector $r) {
-            foreach ($this->routes as $route) {
-                $r->addRoute($route['method'], $route['path'], $route['handler']);
-            }
-        });
+        if ($this->routeCacheFile !== null) {
+            $dispatcher = FastRoute\cachedDispatcher(function (FastRoute\RouteCollector $r) {
+                foreach ($this->routes as $route) {
+                    $r->addRoute($route['method'], $route['path'], $route['handler']);
+                }
+            }, [
+                'cacheFile' => $this->routeCacheFile,
+                'cacheDisabled' => false,
+            ]);
+        } else {
+            $dispatcher = FastRoute\simpleDispatcher(function (FastRoute\RouteCollector $r) {
+                foreach ($this->routes as $route) {
+                    $r->addRoute($route['method'], $route['path'], $route['handler']);
+                }
+            });
+        }
 
         /*
          * Middleware to match the incoming request to a handler.
@@ -172,11 +181,11 @@ final class Mono
             $route = $dispatcher->dispatch($request->getMethod(), $request->getUri()->getPath());
 
             if ($route[0] === FastRoute\Dispatcher::NOT_FOUND) {
-                return $this->response(404);
+                return $this->response(404, 'Not found');
             }
 
             if ($route[0] === FastRoute\Dispatcher::METHOD_NOT_ALLOWED) {
-                return $this->response(405)->withHeader('Allow', implode(', ', $route[1]));
+                return $this->response(405, 'Method not allowed')->withHeader('Allow', implode(', ', $route[1]));
             }
 
             $request = $request
